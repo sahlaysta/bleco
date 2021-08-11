@@ -11,6 +11,7 @@ import javax.swing.JFrame;
 import javax.swing.JList;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
+import javax.swing.JMenuItem;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextField;
@@ -30,6 +31,7 @@ abstract class AbstractGUI extends JFrame {
 	abstract void jTextField_changed(String text);
 	abstract void handwritingOption_click(boolean checked);
 	abstract void characterOption_changed(int option);
+	abstract void aboutOption_click();
 	
 	JTextField jTextField;
 	DefaultListModel<String> listModel;
@@ -83,8 +85,18 @@ abstract class AbstractGUI extends JFrame {
 				}
 			});
 			handwritingJMenu.add(handwritingOptionCheckbox);
+		JMenu helpJMenu = new JMenu("Help");
+			JMenuItem aboutOption = new JMenuItem("About");
+			aboutOption.addActionListener(new ActionListener() {
+				@Override
+				public void actionPerformed(ActionEvent arg0) {
+					aboutOption_click();
+				}
+			});
+			helpJMenu.add(aboutOption);
 		jMenuBar.add(optionsJMenu);
 		jMenuBar.add(handwritingJMenu);
+		jMenuBar.add(helpJMenu);
 		setJMenuBar(jMenuBar);
 		
 		JPanel mainPanel = new JPanel();
