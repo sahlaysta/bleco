@@ -33,15 +33,67 @@ final class GUI extends AbstractGUI {
 		new GUI().setVisible(true);
 	}
 	
-	class Entry {
-		CCCEDICTEntry entry;
-		String styledPinyin;
-		@Override
-		public String toString() {
-			return (characterOption == CHARACTER_SIMPLIFIED ? entry.simplified : entry.traditional)
-					+ ' ' + styledPinyin + " - " + entry.definitions.get(0);
+	static final class Entry {
+		//Entry tuple class
+		final CCCEDICTEntry entry;
+		final String styledPinyin, toStringSimplified, toStringTraditional;
+		Entry(CCCEDICTEntry entry) {
+			this.entry = entry;
+			this.styledPinyin = CCCEDICTPinyin.toFormattedPinyin(entry);
+			this.toStringSimplified =
+					entry.simplified + " "
+					+ styledPinyin + " - "
+					+ styleDefinition(entry.definitions.get(0), true);
+			this.toStringTraditional =
+					entry.traditional + " "
+					+ styledPinyin + " - "
+					+ styleDefinition(entry.definitions.get(0), false);
+		}
+		private static String styleDefinition(String definition, boolean simplified) {
+			/*
+			 * Split the '|' separator in a definition String.
+			 * 
+			 * Example:
+			 * definition = "Linnei township in Yunlin county 雲林縣|云林县, Taiwan"
+			 * output (simplified == true) = "Linnei township in Yunlin county 云林县, Taiwan"
+			 * output (simplified == false) = "Linnei township in Yunlin county 雲林縣, Taiwan"
+			 */
+			StringBuilder sb = new StringBuilder();
+			for (int i = 0; i < definition.length(); i++) {
+				char c = definition.charAt(i);
+				if (c == '|') {
+					if (simplified) {
+						int sbLength = sb.length();
+						int traditionalStartIndex = sbLength - 1;
+						while (sb.charAt(traditionalStartIndex--) > 125) {
+							if (traditionalStartIndex < 0) {
+								traditionalStartIndex=-2;
+								break;
+							}
+						}
+						sb.replace(traditionalStartIndex += 2, sbLength, "");
+						continue;
+					} else {
+						do {
+							if (i >= definition.length() - 1) {
+								i = definition.length();
+								break;
+							} 
+						} while (definition.charAt(++i) > 125);
+						i--;
+						continue;
+					}
+				}
+				if (c == '[') {
+					while (definition.charAt(++i) != ']');
+					continue;
+				}
+				sb.append(c);
+			}
+			return sb.toString();
 		}
 	}
+	
 	Preferences preferences;
 	HandwritingWindow handwritingWindow;
 	Entry[] dictionary;
@@ -62,8 +114,7 @@ final class GUI extends AbstractGUI {
 			searchEntries = new SearchEntry[dictionary.length];
 			int i = 0;
 			for (CCCEDICTEntry entry: cccedict) {
-				(dictionary[i] = new Entry()).entry = entry;
-				dictionary[i].styledPinyin = CCCEDICTPinyin.toFormattedPinyin(entry);
+				dictionary[i] = new Entry(entry);
 				searchEntries[i] = SearchEntry.fromCCCEDICTEntry(entry);
 				i++;
 			}
@@ -133,6 +184,30 @@ final class GUI extends AbstractGUI {
 		jTextField.setCaretPosition(searchFieldEntry.length());
 	}
 	
+	// Simplified / traditional preference change
+	int characterOption;
+	void characterOption_changed(int option) {
+		characterOption = option;
+		jTextField_changed(jTextField.getText());
+	}
+	
+	//Update JList on Text field edit
+	SearchWorker searchWorker;
+	@Override
+	void jTextField_changed(String text) {
+		if (searchWorker != null && !searchWorker.isDone()) {
+			try {
+				searchWorker.cancel(true);
+			} catch(ConcurrentModificationException e) {
+				searchWorker = null;
+			}
+		}
+		
+		//SwingWorker for search results
+		final String searchTerm = text.toLowerCase();
+		(searchWorker = new SearchWorker(searchTerm)).execute();
+	}
+	// Search results SwingWorker ///////////////
 	//Search entry tuple class
 	static final class SearchEntry {
 		final String pinyin, pinyinTone, pinyinRaw, simplified, traditional;
@@ -169,31 +244,6 @@ final class GUI extends AbstractGUI {
 			return sb.toString();
 		}
 	}
-	
-	// Simplified / traditional preference change
-	int characterOption;
-	void characterOption_changed(int option) {
-		characterOption = option;
-		jTextField_changed(jTextField.getText());
-	}
-	
-	//Update JList on Text field edit
-	SearchWorker searchWorker;
-	@Override
-	void jTextField_changed(String text) {
-		if (searchWorker != null && !searchWorker.isDone()) {
-			try {
-				searchWorker.cancel(true);
-			} catch(ConcurrentModificationException e) {
-				searchWorker = null;
-			}
-		}
-		
-		//SwingWorker for search results
-		final String searchTerm = text.toLowerCase();
-		(searchWorker = new SearchWorker(searchTerm)).execute();
-	}
-	// Search results SwingWorker ///////////////
 	private final class SearchWorker extends SwingWorker<Object, Object> {
 		final String searchTerm;
 		final List<Entry> add = new ArrayList<>(), add2 = new ArrayList<>(), add3 = new ArrayList<>();
@@ -204,26 +254,36 @@ final class GUI extends AbstractGUI {
 		@Override
 		protected Object doInBackground() { //Match search results to add to JList
 			if (!searchTerm.contains("*")) {
-				for (int i = 0; i < searchEntries.length; i++) {
-					if (searchTerm.equals(searchEntries[i].pinyin)
-							|| searchTerm.equals(searchEntries[i].pinyinTone)
-							|| searchTerm.equals(searchEntries[i].simplified)
-							|| searchTerm.equals(searchEntries[i].traditional)) {
+				int i = 0;
+				for (SearchEntry searchEntry: searchEntries) {
+					if (searchTerm.equals(searchEntry.pinyin)
+							|| searchTerm.equals(searchEntry.pinyinTone)
+							|| searchTerm.equals(searchEntry.simplified)
+							|| searchTerm.equals(searchEntry.traditional)) {
 						add.add(dictionary[i]);
 					}
-					else if (searchMatches(searchTerm, searchEntries[i].pinyin)
-							|| searchMatches(searchTerm, searchEntries[i].pinyinTone)
-							|| searchMatches(searchTerm, searchEntries[i].simplified)
-							|| searchMatches(searchTerm, searchEntries[i].traditional)) {
+					else if (searchMatches(searchTerm, searchEntry.pinyin)
+							|| searchMatches(searchTerm, searchEntry.pinyinTone)
+							|| searchMatches(searchTerm, searchEntry.simplified)
+							|| searchMatches(searchTerm, searchEntry.traditional)) {
 						add2.add(dictionary[i]);
 					}
-					else if (pinyinMatches(searchTerm, i)
-							|| pinyinMatchesBackwards(searchTerm, i)) {
+					else if (pinyinMatches(searchTerm, i, true)
+							|| pinyinMatchesBackwards(searchTerm, i, true)
+							|| pinyinMatches(searchTerm, i, false)
+							|| pinyinMatchesBackwards(searchTerm, i, false)) {
 						add3.add(dictionary[i]);
 					}
+					i++;
 				}
 			} else { //wildcard search
-				
+				int i = 0;
+				for (SearchEntry searchEntry: searchEntries) {
+					if (wildcardMatch(searchTerm, searchEntry.simplified)
+						|| wildcardMatch(searchTerm, searchEntry.traditional))
+						add.add(dictionary[i]);
+					i++;
+				}
 			}
 			return null;
 		}
@@ -235,12 +295,26 @@ final class GUI extends AbstractGUI {
 				jList.setEnabled(false);
 				return;
 			} else jList.setEnabled(true);
-			for (Entry e: add)
-				listModel.addElement(e.toString());
-			for (Entry e: add2)
-				listModel.addElement(e.toString());
-			for (Entry e: add3)
-				listModel.addElement(e.toString());
+			switch (characterOption) {
+			case CHARACTER_SIMPLIFIED: {
+				for (Entry e: add)
+					listModel.addElement(e.toStringSimplified);
+				for (Entry e: add2)
+					listModel.addElement(e.toStringSimplified);
+				for (Entry e: add3)
+					listModel.addElement(e.toStringSimplified);
+				break;
+			}
+			case CHARACTER_TRADITIONAL: {
+				for (Entry e: add)
+					listModel.addElement(e.toStringTraditional);
+				for (Entry e: add2)
+					listModel.addElement(e.toStringTraditional);
+				for (Entry e: add3)
+					listModel.addElement(e.toStringTraditional);
+				break;
+			}
+			}
 			if (listModel.getSize() == 0) {
 				jList.setEnabled(false);
 				listModel.addElement("No results found");
@@ -249,15 +323,29 @@ final class GUI extends AbstractGUI {
 		
 		///// Search result methods //////////
 		private final boolean searchMatches(String searchTerm, String entryString) {
+			/*
+			 * For 'Auto-fill' search functionality
+			 * Example:
+			 * pinyinOfTheEntryBeingCompared = "huashu";
+			 * "huas" will match the entry
+			 * "hua" also matches it
+			 * "hu" also
+			 */
 			if (entryString.length() <= searchTerm.length())
 				return false;
 			return entryString.substring(0, searchTerm.length()).equals(searchTerm);
 		}
-		private final boolean pinyinMatches(String searchTerm, int entryIndex) {
+		private final boolean pinyinMatches(String searchTerm, int entryIndex, boolean simplified) {
+			/*
+			 * Search functionality for search results that start with a Chinese character.
+			 * Example:
+			 * "滑ban" matches "滑板" (pronounced huaban)
+			 */
+			String chinese = simplified ? searchEntries[entryIndex].simplified : searchEntries[entryIndex].traditional;
 			for (int i = searchTerm.length() - 1; i > 0; i--) {
-				if (i >= searchEntries[entryIndex].simplified.length())
+				if (i >= chinese.length())
 					continue;
-				if (searchTerm.substring(0, i).equals(searchEntries[entryIndex].simplified.substring(0, i))) {
+				if (searchTerm.substring(0, i).equals(chinese.substring(0, i))) {
 					String pinyinSearchTerm = searchTerm.substring(i);
 					String pinyinSearchEntry = searchEntries[entryIndex].pinyinRaw.substring(
 							1 + nthIndexOfChar(searchEntries[entryIndex].pinyinRaw, i, ' '))
@@ -265,40 +353,35 @@ final class GUI extends AbstractGUI {
 					if (searchMatches(pinyinSearchTerm, pinyinSearchEntry)
 							|| pinyinSearchTerm.equals(pinyinSearchEntry))
 						return true;
-					String formatted = pinyinSearchEntry
-							.replace(" ", "")
-							.replace("1", "")
-							.replace("2", "")
-							.replace("3", "")
-							.replace("4", "")
-							.replace("5", "");
+					String formatted = SearchEntry.formatPinyin(pinyinSearchEntry);
 					return searchMatches(pinyinSearchTerm, formatted)
 							|| pinyinSearchTerm.contentEquals(formatted);
 				}
 			}
 			return false;
 		}
-		private final boolean pinyinMatchesBackwards(String searchTerm, int entryIndex) {
+		private final boolean pinyinMatchesBackwards(String searchTerm, int entryIndex, boolean simplified) {
+			/*
+			 * Search functionality for search results that end with a Chinese character.
+			 * Example:
+			 * "hua板" matches "滑板" (pronounced huaban)
+			 */
+			String chinese = simplified ? searchEntries[entryIndex].simplified : searchEntries[entryIndex].traditional;
 			for (int i = 0; i < searchTerm.length(); i++) {
 				String substring = searchTerm.substring(i);
-				for (int ii = 1; ii < searchEntries[entryIndex].simplified.length(); ii++) {
-					if (substring.equals(searchEntries[entryIndex].simplified.substring(ii))) {
+				for (int ii = 1; ii < chinese.length(); ii++) {
+					if (substring.equals(chinese.substring(ii))) {
 						String pinyinSearchTerm = searchTerm.substring(0, i);
 						String pinyinSearchEntry = searchEntries[entryIndex].pinyinRaw.substring(0, 
-								1 + nthLastIndexOfChar(searchEntries[entryIndex].pinyinRaw, ii, ' '))
+								1 + nthIndexOfChar(searchEntries[entryIndex].pinyinRaw, ii, ' '))
 								.replace(" ", "");
+
 						if (searchMatches(pinyinSearchTerm, pinyinSearchEntry)
 								|| pinyinSearchTerm.equals(pinyinSearchEntry))
 							return true;
-						String formatted = pinyinSearchEntry
-								.replace(" ", "")
-								.replace("1", "")
-								.replace("2", "")
-								.replace("3", "")
-								.replace("4", "")
-								.replace("5", "");
+						String formatted = SearchEntry.formatPinyin(pinyinSearchEntry);
 						return searchMatches(pinyinSearchTerm, formatted)
-								|| pinyinSearchTerm.contentEquals(formatted);
+								|| pinyinSearchTerm.equals(formatted);
 					}
 				}
 			}
@@ -312,13 +395,22 @@ final class GUI extends AbstractGUI {
 						return i;
 			return -1;
 		}
-		private final int nthLastIndexOfChar(String str, int n, char ch) {
-			int count = 0;
-			for (int i = str.length() - 1; i >= 0; i--)
-				if (str.charAt(i) ==  ch)
-					if (++count == n)
-						return i;
-			return -1;
+		private boolean wildcardMatch(String wildCardSearch, String chinese) {
+			/*
+			 * Matches wild card search results.
+			 * Example:
+			 * string = "中*";
+			 * The string will match any dictionary entry with a string length of 2, and whose first character equals 中
+			 */
+			int length = wildCardSearch.length();
+			if (length != chinese.length())
+				return false;
+			for (int i = 0; i < length; i++) {
+				final char c = wildCardSearch.charAt(i);
+				if (c != chinese.charAt(i) && c != '*')
+					return false;
+			}
+			return true;
 		}
 	}
 	
