@@ -215,11 +215,11 @@ final class GUI extends AbstractGUI {
 							|| searchMatches(searchTerm, searchEntries[i].pinyinTone)
 							|| searchMatches(searchTerm, searchEntries[i].simplified)
 							|| searchMatches(searchTerm, searchEntries[i].traditional)) {
-						add.add(dictionary[i]);
+						add2.add(dictionary[i]);
 					}
 					else if (pinyinMatches(searchTerm, i)
 							|| pinyinMatchesBackwards(searchTerm, i)) {
-						add.add(dictionary[i]);
+						add3.add(dictionary[i]);
 					}
 				}
 			} else { //wildcard search
