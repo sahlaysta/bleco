@@ -115,7 +115,14 @@ final class Preferences {
 		bw.write("\r\n\t}\r\n}");
 		bw.close();
 	}
+
 	static final String escapeJson(CharSequence cs) {
+		/*
+		 * Escape a String to Json
+		 * Example:
+		 * string = "Hello world";
+		 * output = "\u0048\u0065\u006c\u006c\u006f\u0020\u0077\u006f\u0072\u006c\u0064"
+		 */
 		char[] chars = new char[cs.length() * 6];
 		for (int i = 0; i < cs.length(); i++) {
 			String hex = "\\u" + String.format("%04x", (int) cs.charAt(i));
