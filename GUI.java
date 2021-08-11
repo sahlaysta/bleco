@@ -13,6 +13,7 @@ import java.util.List;
 
 import javax.swing.JDialog;
 import javax.swing.JFrame;
+import javax.swing.JOptionPane;
 import javax.swing.JTextField;
 import javax.swing.SwingWorker;
 
@@ -458,5 +459,18 @@ final class GUI extends AbstractGUI {
 				}
 			});
 		}
+	}
+	
+	//About option click
+	@Override
+	void aboutOption_click() {
+		JOptionPane.showMessageDialog(
+				this,
+				"Bleco written by porog\n"
+						+ "https://github.com/sahlaysta/bleco\n\n"
+						+ "CC-CEDICT belongs to MDBG: https://cc-cedict.org/wiki/\n\n"
+						+ "HanziLookup belongs to Jordan Kiang: https://www.kiang.org/jordan/software/hanzilookup/",
+				"About",
+				JOptionPane.INFORMATION_MESSAGE);
 	}
 }
