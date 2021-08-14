@@ -127,9 +127,8 @@ final class Preferences {
 		for (int i = 0; i < cs.length(); i++) {
 			String hex = "\\u" + String.format("%04x", (int) cs.charAt(i));
 			int ii = 0;
-			for (int iii = (i * 6); iii < (i * 6) + 6; iii++) {
+			for (int iii = (i * 6); iii < (i * 6) + 6; iii++)
 				chars[iii] = hex.charAt(ii++);
-			}
 		}
 		return new String(chars);
 	}
