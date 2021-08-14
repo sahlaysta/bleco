@@ -7,6 +7,8 @@ import java.awt.GraphicsEnvironment;
 import java.awt.Insets;
 import java.awt.Point;
 import java.awt.Rectangle;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import java.awt.event.MouseEvent;
@@ -16,8 +18,10 @@ import java.awt.event.WindowEvent;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.ConcurrentModificationException;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import javax.swing.JDialog;
@@ -69,15 +73,15 @@ final class GUI extends AbstractGUI {
 		//Load Google Noto Sans font
 		try {
 			font_GoogleNoto = Font.createFont(Font.TRUETYPE_FONT,
-					getClass().getResourceAsStream("NotoSansSC-Regular.otf"));
+					getClass().getResourceAsStream("resources/NotoSansSC-Regular.otf"));
 			GraphicsEnvironment.getLocalGraphicsEnvironment().registerFont(font_GoogleNoto);
 		} catch (FontFormatException | IOException e) {
 			e.printStackTrace();
 		}
 		
 		try { //load Chinese dictionary
-			dictionary = CompiledDictionary.decompile(getClass().getResourceAsStream("compiledDict.dat"));
-			dissectedExampleSentences = CompiledDictionary.decompileDissectedExampleSentences(getClass().getResourceAsStream("compiledExamples.dat"));
+			dictionary = CompiledDictionary.decompile(getClass().getResourceAsStream("resources/compiledDict.dat"));
+			dissectedExampleSentences = CompiledDictionary.decompileDissectedExampleSentences(getClass().getResourceAsStream("resources/compiledExamples.dat"));
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -178,7 +182,7 @@ final class GUI extends AbstractGUI {
 		final String searchTerm = text.toLowerCase().replace(" ", "");
 		(searchWorker = new SearchWorker(searchTerm)).execute();
 	}
-	// Search results SwingWorker ///////////////
+	// Search results SwingWorker ///////////////////////////////////////////////////////
 	static final class SearchEntry { //Search entry tuple class
 		final String pinyin, pinyinTone, pinyinRaw;
 		SearchEntry(String pinyin, String pinyinTone, String pinyinRaw) {
@@ -250,8 +254,13 @@ final class GUI extends AbstractGUI {
 							add3.add(e);
 						else add6.add(e);
 				if (getTotalSize() == 0) {
-					for (Index ind: dissectChineseSentence(searchTerm))
-						add.add(findEntry(searchTerm.substring(ind.start, ind.end)));
+					for (Index ind: dissectChineseSentence(searchTerm)) {
+						String chinese = searchTerm.substring(ind.start, ind.end);
+						if (chinese.length() == 1)
+							add.add(findHighestEntry(chinese));
+						else
+							add.add(findEntry(chinese));
+					}
 				}
 			} else { //wildcard search
 				for (Entry e: dictionary)
@@ -261,6 +270,7 @@ final class GUI extends AbstractGUI {
 			}
 			return null;
 		}
+		
 		@Override
 		protected void done() { //Add results to JList
 			if (canceled)
@@ -424,7 +434,65 @@ final class GUI extends AbstractGUI {
 		}
 	}
 	
-	//Handwriting window class
+	// Pinyin priority method //////////////////////////////////////////////////////////////////
+	Entry findHighestEntry(String chinese) {
+		/*
+		 * If a Chinese character has multiple pronunciations,
+		 * get the most common one.
+		 * 
+		 * Example: with "强", prefer "qiang" over "jiang"
+		 */
+		final String pinyin = getPinyin(chinese);
+		for (Entry entry: dictionary) {
+			if (entry.styledPinyin.equals(pinyin) && entry.simplified.equals(chinese))
+				return entry;
+			else if (entry.styledPinyin.equals(pinyin) && entry.traditional.equals(chinese))
+				return entry;
+		}
+		return null;
+	}
+	static class CountMap<T> {
+		private Map<T, Integer> map = new HashMap<>();
+		public void add(T e) {
+			map.put(e, 1 + get(e));
+		}
+		public int get(T e) {
+			return map.getOrDefault(e, 0);
+		}
+		public T getHighest() {
+			T result = null;
+			int highest = Integer.MIN_VALUE;
+			for (java.util.Map.Entry<T, Integer> set: map.entrySet()) {
+				int value = set.getValue();
+				if (value > highest) {
+					highest = value;
+					result = set.getKey();
+				}
+			}
+			return result;
+		}
+	}
+	final SearchWorker sw = new SearchWorker(null);
+	String getPinyin(String chinese) {
+		CountMap<String> cm = new CountMap<>();
+		for (Entry e: dictionary) {
+			int i = e.simplified.indexOf(chinese);
+			if (i == -1)
+				if ((i = e.traditional.indexOf(chinese)) == -1)
+						continue;
+			String pinyin;
+			if (i == 0)
+				pinyin = e.styledPinyin;
+			else
+				pinyin = e.styledPinyin.substring(1 + sw.nthIndexOfChar(e.styledPinyin, i, ' '));
+			if ((i = pinyin.indexOf(' ')) != -1)
+				pinyin = pinyin.substring(0, i);
+			cm.add(pinyin);
+		}
+		return cm.getHighest();
+	}
+	
+	//Handwriting window class /////////////////////////////////
 	@Override
 	void handwritingOption_click(boolean checked) {
 		handwritingWindow.setVisible(checked);
@@ -471,7 +539,7 @@ final class GUI extends AbstractGUI {
 		}
 	}
 	
-	// Double-click Dictionary Entry window ////////////////////////
+	// Double-click Dictionary Entry window ////////////////////////////////////////////////////////////
 	static final int MAX_EXAMPLE_SENTENCES = 10;
 	@Override
 	void jList_doubleClick(int index) {
@@ -513,19 +581,27 @@ final class GUI extends AbstractGUI {
 				
 				// Try to match selection
 				Entry match = null;
-				if (simplified) {
-					for (Entry entry: dictionary)
-						if (entry.simplified.equals(selection)) {
-							match = entry;
-							break;
-						}
+				if (selection.length() == 1) {
+					match = findHighestEntry(selection);
+					if (Character.isUpperCase(match.styledPinyin.charAt(0)))
+							match = null;
 				}
-				else {
-					for (Entry entry: dictionary)
-						if (entry.traditional.equals(selection)) {
-							match = entry;
-							break;
+				if (match == null) {
+					if (simplified) {
+						for (Entry entry: dictionary) {
+							if (entry.simplified.equals(selection)) {
+								match = entry;
+								break;
+							}
 						}
+					}
+					else {
+						for (Entry entry: dictionary)
+							if (entry.traditional.equals(selection)) {
+								match = entry;
+								break;
+							}
+					}
 				}
 				
 				// Show popup menu
@@ -543,6 +619,13 @@ final class GUI extends AbstractGUI {
 						JMenuItem copyItem = new JMenuItem("Copy");
 							copyItem.setMargin(ITEM_INSETS);
 							copyItem.setAccelerator(CTRL_C);
+							copyItem.addActionListener(new ActionListener() {
+								@Override
+								public void actionPerformed(ActionEvent arg0) { //Copy selection to clipboard
+									java.awt.Toolkit.getDefaultToolkit().getSystemClipboard()
+							        .setContents(new java.awt.datatransfer.StringSelection(selection), null);
+								}
+							});
 							menu.add(copyItem);
 					menu.show(jTextPane, arg0.getX(), arg0.getY() + 25);
 				}
@@ -600,8 +683,6 @@ final class GUI extends AbstractGUI {
 				break;
 			ExampleSentence es = Entry.EXAMPLE_SENTENCES.get(ii);
 			String chineseSentence = simplified ? es.simplified : es.traditional;
-			if (chineseSentence.length() > 30)
-				continue;
 			if (addedSentences.contains(chineseSentence)) {
 				i++;
 				continue;
@@ -621,7 +702,8 @@ final class GUI extends AbstractGUI {
 	}
 	String dissect(String chinese, Index[] indexes) {
 		StringBuilder sb = new StringBuilder();
-		for (int i = 0; i < chinese.length();) {
+		final int length = chinese.length();
+		for (int i = 0; i < length;) {
 			for (Index ind: indexes) {
 				if (ind.start == i) {
 					String word = chinese.substring(ind.start, ind.end);
@@ -634,6 +716,8 @@ final class GUI extends AbstractGUI {
 					continue;
 				}
 			}
+			if (i >= length)
+				break;
 			sb.append(chinese.charAt(i++));
 		}
 		return sb.toString();
@@ -649,25 +733,18 @@ final class GUI extends AbstractGUI {
 		 * parts = "他们", "是", "热爱", "和平", "的", "人"
 		 */
 		List<Index> indexes = new ArrayList<>();
-		for (int i = 0; i < chinese.length();) {
-			int index = dissectOne(chinese, i);
-			if (index == -1) {
-				i++;
-				continue;
+		for (int i = chinese.length(); i >= 0; i--)
+			for (int ii = 0; ii < i; ii++) {
+				String substr = chinese.substring(ii, i);
+				Entry entry = findEntry(substr);
+				if (entry != null) {
+					int length = entry.simplified.length();
+					indexes.add(0, new Index(ii, ii + length));
+					i -= length - 1;
+					break;
+				}
 			}
-			indexes.add(new Index(i, index));
-			i += index - i;
-		}
 		return indexes;
-	}
-	private int dissectOne(String chinese, int index) {
-		for (int i = chinese.length(); i >= index; i--) {
-			String wordSearch = chinese.substring(index, i);
-			Entry entry = findEntry(wordSearch);
-			if (entry != null)
-				return i;
-		}
-		return -1;
 	}
 	Entry findEntry(String chinese) {
 		for (Entry entry: dictionary) {
@@ -691,12 +768,12 @@ final class GUI extends AbstractGUI {
 		return result;
 	}
 	
-	//About option click //////////////////
+	//About option click //////////////////////////////////////////////////////////////////////////////////////////
 	@Override
 	void aboutOption_click() {
 		JOptionPane.showMessageDialog(
 				this,
-				"Bleco v1.0b-alpha written by porog\n"
+				"Bleco v1.0c-alpha written by porog\n"
 						+ "https://github.com/sahlaysta/bleco\n\n"
 						+ "CC-CEDICT belongs to MDBG: https://cc-cedict.org/wiki/\n"
 						+ "Example sentences belong to Tatoeba: https://tatoeba.org/en/\n"
