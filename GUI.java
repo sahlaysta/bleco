@@ -1,27 +1,45 @@
 package bleco;
 
 import java.awt.Dimension;
+import java.awt.Font;
+import java.awt.FontFormatException;
+import java.awt.GraphicsEnvironment;
+import java.awt.Insets;
 import java.awt.Point;
+import java.awt.Rectangle;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.ConcurrentModificationException;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import javax.swing.JDialog;
 import javax.swing.JFrame;
+import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
+import javax.swing.JPopupMenu;
+import javax.swing.JScrollPane;
 import javax.swing.JTextField;
+import javax.swing.JTextPane;
+import javax.swing.KeyStroke;
 import javax.swing.SwingWorker;
+import javax.swing.border.EmptyBorder;
+import javax.swing.event.HyperlinkEvent;
+import javax.swing.event.HyperlinkListener;
+import javax.swing.text.BadLocationException;
+import javax.swing.text.Element;
 
 //CC-CEDICT parser by me: https://github.com/sahlaysta/cc-cedict-parser
 import com.github.sahlaysta.cccedict.CCCEDICTEntry;
-import com.github.sahlaysta.cccedict.CCCEDICTParser;
-import com.github.sahlaysta.cccedict.CCCEDICTPinyin;
 
+import bleco.CompiledDictionary.TatoebaParser.ExampleSentence;
 import bleco.Preferences.WindowProperties;
 //HanziLookup Swing component from: https://www.kiang.org/jordan/software/hanzilookup/
 import bleco.handwriting.hanzilookup.HanziLookup;
@@ -34,102 +52,54 @@ final class GUI extends AbstractGUI {
 		new GUI().setVisible(true);
 	}
 	
-	static final class Entry {
-		//Entry tuple class
-		final CCCEDICTEntry entry;
-		final String styledPinyin, toStringSimplified, toStringTraditional;
-		Entry(CCCEDICTEntry entry) {
-			this.entry = entry;
-			this.styledPinyin = CCCEDICTPinyin.toFormattedPinyin(entry);
-			this.toStringSimplified =
-					entry.simplified + " "
-					+ styledPinyin + " - "
-					+ styleDefinition(entry.definitions.get(0), true);
-			this.toStringTraditional =
-					entry.traditional + " "
-					+ styledPinyin + " - "
-					+ styleDefinition(entry.definitions.get(0), false);
-		}
-		private static String styleDefinition(String definition, boolean simplified) {
-			/*
-			 * Split the '|' separator in a definition String.
-			 * 
-			 * Example:
-			 * definition = "Linnei township in Yunlin county 雲林縣|云林县, Taiwan"
-			 * output (simplified == true) = "Linnei township in Yunlin county 云林县, Taiwan"
-			 * output (simplified == false) = "Linnei township in Yunlin county 雲林縣, Taiwan"
-			 */
-			StringBuilder sb = new StringBuilder();
-			for (int i = 0; i < definition.length(); i++) {
-				char c = definition.charAt(i);
-				if (c == '|') {
-					if (simplified) {
-						int sbLength = sb.length();
-						int traditionalStartIndex = sbLength - 1;
-						while (sb.charAt(traditionalStartIndex--) > 125) {
-							if (traditionalStartIndex < 0) {
-								traditionalStartIndex=-2;
-								break;
-							}
-						}
-						sb.replace(traditionalStartIndex += 2, sbLength, "");
-						continue;
-					} else {
-						do {
-							if (i >= definition.length() - 1) {
-								i = definition.length();
-								break;
-							} 
-						} while (definition.charAt(++i) > 125);
-						i--;
-						continue;
-					}
-				}
-				if (c == '[') {
-					while (definition.charAt(++i) != ']');
-					continue;
-				}
-				sb.append(c);
-			}
-			return sb.toString();
-		}
-	}
-	
 	Preferences preferences;
 	HandwritingWindow handwritingWindow;
 	Entry[] dictionary;
-	SearchEntry[] searchEntries;
+	Index[][] dissectedExampleSentences;
 	WindowProperties windowProperties;
+	Font font_GoogleNoto;
+	
 	public GUI() {
-		initComponent();
 		setMinimumSize(new Dimension(230, 150));
-		//Apply preferences
 		preferences = new Preferences();
-		setCharacterOption(preferences.getCharacterOption());
-		characterOption_changed(preferences.getCharacterOption());
 		preferences.applyWindowProperties(this);
 		
-		try { //load CC-CEDICT
-			List<CCCEDICTEntry> cccedict = CCCEDICTParser.parse(getClass().getResourceAsStream("cedict_ts.u8"));
-			dictionary = new Entry[cccedict.size()];
-			searchEntries = new SearchEntry[dictionary.length];
-			int i = 0;
-			for (CCCEDICTEntry entry: cccedict) {
-				dictionary[i] = new Entry(entry);
-				searchEntries[i] = SearchEntry.fromCCCEDICTEntry(entry);
-				i++;
-			}
+		setLoading(true);
+
+		//Load Google Noto Sans font
+		try {
+			font_GoogleNoto = Font.createFont(Font.TRUETYPE_FONT,
+					getClass().getResourceAsStream("NotoSansSC-Regular.otf"));
+			GraphicsEnvironment.getLocalGraphicsEnvironment().registerFont(font_GoogleNoto);
+		} catch (FontFormatException | IOException e) {
+			e.printStackTrace();
+		}
+		
+		try { //load Chinese dictionary
+			dictionary = CompiledDictionary.decompile(getClass().getResourceAsStream("compiledDict.dat"));
+			dissectedExampleSentences = CompiledDictionary.decompileDissectedExampleSentences(getClass().getResourceAsStream("compiledExamples.dat"));
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 		
+		HanziLookup hanziLookup = null;
 		try { //load Chinese Handwriting window
-			HanziLookup hanziLookup = new HanziLookup(getClass().getResourceAsStream("handwriting/strokes-extended.dat"), jTextField.getFont().deriveFont(15f));
-			handwritingWindow = new HandwritingWindow(this, jTextField, hanziLookup, preferences.getHandwritingWindowLocation());
+			Font font = new JTextField().getFont().deriveFont(15f);
+			hanziLookup = new HanziLookup(getClass().getResourceAsStream("handwriting/strokes-extended.dat"), font);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 		
+		setLoading(false);
+		
+		initComponent();
+		
+		//Apply preferences
+		setCharacterOption(preferences.getCharacterOption());
+		characterOption_changed(preferences.getCharacterOption());
+		
+		//Create handwritingWindow
+		handwritingWindow = new HandwritingWindow(this, jTextField, hanziLookup, preferences.getHandwritingWindowLocation());
 		if (preferences.getHandwritingWindowOpen()) {
 			handwritingWindow.setVisible(true);
 			handwritingOptionCheckbox.setSelected(true);
@@ -143,7 +113,7 @@ final class GUI extends AbstractGUI {
             {
                 try {
 					preferences.save(GUI.this);
-				} catch (IOException e2) {
+				} catch (Exception e2) {
 					System.out.println("Failed to save prefs");
 				}
             }
@@ -179,7 +149,7 @@ final class GUI extends AbstractGUI {
 		ca.componentMoved(null);
 		addComponentListener(ca);
 		
-		//Saved search field entry
+		//Preference search field entry
 		String searchFieldEntry = preferences.getSearchFieldEntry();
 		jTextField.setText(searchFieldEntry);
 		jTextField.setCaretPosition(searchFieldEntry.length());
@@ -189,43 +159,38 @@ final class GUI extends AbstractGUI {
 	int characterOption;
 	void characterOption_changed(int option) {
 		characterOption = option;
-		jTextField_changed(jTextField.getText());
+		jTextField_changed(jTextField.getText()); //refresh jTextField
 	}
 	
-	//Update JList on Text field edit
+	// Search function (Update JList on Text field edit)
 	SearchWorker searchWorker;
 	@Override
 	void jTextField_changed(String text) {
 		if (searchWorker != null && !searchWorker.isDone()) {
 			try {
-				searchWorker.cancel(true);
+				searchWorker.cancel();
 			} catch(ConcurrentModificationException e) {
 				searchWorker = null;
 			}
 		}
 		
 		//SwingWorker for search results
-		final String searchTerm = text.toLowerCase();
+		final String searchTerm = text.toLowerCase().replace(" ", "");
 		(searchWorker = new SearchWorker(searchTerm)).execute();
 	}
 	// Search results SwingWorker ///////////////
-	//Search entry tuple class
-	static final class SearchEntry {
-		final String pinyin, pinyinTone, pinyinRaw, simplified, traditional;
-		SearchEntry(String pinyin, String pinyinTone, String pinyinRaw, String simplified, String traditional) {
+	static final class SearchEntry { //Search entry tuple class
+		final String pinyin, pinyinTone, pinyinRaw;
+		SearchEntry(String pinyin, String pinyinTone, String pinyinRaw) {
 			this.pinyin = pinyin;
 			this.pinyinTone = pinyinTone;
 			this.pinyinRaw = pinyinRaw;
-			this.simplified = simplified;
-			this.traditional = traditional;
 		}
 		static SearchEntry fromCCCEDICTEntry(CCCEDICTEntry entry) {
 			return new SearchEntry(
 					formatPinyin(entry.pronunciation).replace("u:", "v"),
 					entry.pronunciation.replace(" ", "").toLowerCase().replace("u:", "v"),
-					entry.pronunciation.replace("u:", "v"),
-					entry.simplified.replace(" ", "").toLowerCase(),
-					entry.traditional.replace(" ", "").toLowerCase()
+					entry.pronunciation.replace("u:", "v")
 					);
 		}
 		static final String formatPinyin(String pinyin) {
@@ -247,49 +212,61 @@ final class GUI extends AbstractGUI {
 	}
 	private final class SearchWorker extends SwingWorker<Object, Object> {
 		final String searchTerm;
-		final List<Entry> add = new ArrayList<>(), add2 = new ArrayList<>(), add3 = new ArrayList<>();
+		final List<Entry> add = new ArrayList<>(), add2 = new ArrayList<>(), add3 = new ArrayList<>(),
+				add4 = new ArrayList<>(), add5 = new ArrayList<>(), add6 = new ArrayList<>();
+		public Entry[] options;
+		boolean canceled = false;
 		SearchWorker(String searchTerm) {
 			super();
 			this.searchTerm = searchTerm;
 		}
+		public void cancel() {
+			canceled = true;
+			super.cancel(true);
+		}
 		@Override
 		protected Object doInBackground() { //Match search results to add to JList
 			if (!searchTerm.contains("*")) {
-				int i = 0;
-				for (SearchEntry searchEntry: searchEntries) {
-					if (searchTerm.equals(searchEntry.pinyin)
-							|| searchTerm.equals(searchEntry.pinyinTone)
-							|| searchTerm.equals(searchEntry.simplified)
-							|| searchTerm.equals(searchEntry.traditional)) {
-						add.add(dictionary[i]);
-					}
-					else if (searchMatches(searchTerm, searchEntry.pinyin)
-							|| searchMatches(searchTerm, searchEntry.pinyinTone)
-							|| searchMatches(searchTerm, searchEntry.simplified)
-							|| searchMatches(searchTerm, searchEntry.traditional)) {
-						add2.add(dictionary[i]);
-					}
-					else if (pinyinMatches(searchTerm, i, true)
-							|| pinyinMatchesBackwards(searchTerm, i, true)
-							|| pinyinMatches(searchTerm, i, false)
-							|| pinyinMatchesBackwards(searchTerm, i, false)) {
-						add3.add(dictionary[i]);
-					}
-					i++;
+				for (Entry e: dictionary)
+					if (searchTerm.equals(e.searchEntry.pinyin)
+							|| searchTerm.equals(e.searchEntry.pinyinTone)
+							|| searchTerm.equals(e.simplified)
+							|| searchTerm.equals(e.traditional))
+						if (Character.isLowerCase(e.styledPinyin.charAt(0)))
+							add.add(e);
+						else add4.add(e);
+					else if (searchMatches(searchTerm, e.searchEntry.pinyin)
+							|| searchMatches(searchTerm, e.searchEntry.pinyinTone)
+							|| searchMatches(searchTerm, e.simplified)
+							|| searchMatches(searchTerm, e.traditional))
+						if (Character.isLowerCase(e.styledPinyin.charAt(0)))
+							add2.add(e);
+						else add5.add(e);
+					else if (pinyinMatches(searchTerm, e, true)
+							|| pinyinMatchesBackwards(searchTerm, e, true)
+							|| pinyinMatches(searchTerm, e, false)
+							|| pinyinMatchesBackwards(searchTerm, e, false))
+						if (Character.isLowerCase(e.styledPinyin.charAt(0)))
+							add3.add(e);
+						else add6.add(e);
+				if (getTotalSize() == 0) {
+					for (Index ind: dissectChineseSentence(searchTerm))
+						add.add(findEntry(searchTerm.substring(ind.start, ind.end)));
 				}
 			} else { //wildcard search
-				int i = 0;
-				for (SearchEntry searchEntry: searchEntries) {
-					if (wildcardMatch(searchTerm, searchEntry.simplified)
-						|| wildcardMatch(searchTerm, searchEntry.traditional))
-						add.add(dictionary[i]);
-					i++;
-				}
+				for (Entry e: dictionary)
+					if (wildcardMatch(searchTerm, e.simplified)
+						|| wildcardMatch(searchTerm, e.traditional))
+						add.add(e);
 			}
 			return null;
 		}
 		@Override
-		protected void done() {
+		protected void done() { //Add results to JList
+			if (canceled)
+				return;
+			listModel.addElement("");
+			jList.setSelectedIndex(1);
 			listModel.clear();
 			if (searchTerm.length() == 0) {
 				listModel.addElement("Enter a search term...");
@@ -297,12 +274,19 @@ final class GUI extends AbstractGUI {
 				return;
 			} else jList.setEnabled(true);
 			switch (characterOption) {
+			//Populate JList
 			case CHARACTER_SIMPLIFIED: {
 				for (Entry e: add)
 					listModel.addElement(e.toStringSimplified);
 				for (Entry e: add2)
 					listModel.addElement(e.toStringSimplified);
 				for (Entry e: add3)
+					listModel.addElement(e.toStringSimplified);
+				for (Entry e: add4)
+					listModel.addElement(e.toStringSimplified);
+				for (Entry e: add5)
+					listModel.addElement(e.toStringSimplified);
+				for (Entry e: add6)
 					listModel.addElement(e.toStringSimplified);
 				break;
 			}
@@ -313,6 +297,12 @@ final class GUI extends AbstractGUI {
 					listModel.addElement(e.toStringTraditional);
 				for (Entry e: add3)
 					listModel.addElement(e.toStringTraditional);
+				for (Entry e: add4)
+					listModel.addElement(e.toStringTraditional);
+				for (Entry e: add5)
+					listModel.addElement(e.toStringTraditional);
+				for (Entry e: add6)
+					listModel.addElement(e.toStringTraditional);
 				break;
 			}
 			}
@@ -320,6 +310,25 @@ final class GUI extends AbstractGUI {
 				jList.setEnabled(false);
 				listModel.addElement("No results found");
 			}
+			
+			//Create selections
+			int i = 0;
+			options = new Entry[getTotalSize()];
+			for (Entry e: add)
+				options[i++] = e;
+			for (Entry e: add2)
+				options[i++] = e;
+			for (Entry e: add3)
+				options[i++] = e;
+			for (Entry e: add4)
+				options[i++] = e;
+			for (Entry e: add5)
+				options[i++] = e;
+			for (Entry e: add6)
+				options[i++] = e;
+		}
+		int getTotalSize() {
+			return add.size() + add2.size() + add3.size() + add4.size() + add5.size() + add6.size();
 		}
 		
 		///// Search result methods //////////
@@ -336,20 +345,20 @@ final class GUI extends AbstractGUI {
 				return false;
 			return entryString.substring(0, searchTerm.length()).equals(searchTerm);
 		}
-		private final boolean pinyinMatches(String searchTerm, int entryIndex, boolean simplified) {
+		private final boolean pinyinMatches(String searchTerm, Entry entry, boolean simplified) {
 			/*
 			 * Search functionality for search results that start with a Chinese character.
 			 * Example:
 			 * "滑ban" matches "滑板" (pronounced huaban)
 			 */
-			String chinese = simplified ? searchEntries[entryIndex].simplified : searchEntries[entryIndex].traditional;
+			String chinese = simplified ? entry.simplified : entry.traditional;
 			for (int i = searchTerm.length() - 1; i > 0; i--) {
 				if (i >= chinese.length())
 					continue;
 				if (searchTerm.substring(0, i).equals(chinese.substring(0, i))) {
 					String pinyinSearchTerm = searchTerm.substring(i);
-					String pinyinSearchEntry = searchEntries[entryIndex].pinyinRaw.substring(
-							1 + nthIndexOfChar(searchEntries[entryIndex].pinyinRaw, i, ' '))
+					String pinyinSearchEntry = entry.searchEntry.pinyinRaw.substring(
+							1 + nthIndexOfChar(entry.searchEntry.pinyinRaw, i, ' '))
 							.replace(" ", "");
 					if (searchMatches(pinyinSearchTerm, pinyinSearchEntry)
 							|| pinyinSearchTerm.equals(pinyinSearchEntry))
@@ -361,20 +370,20 @@ final class GUI extends AbstractGUI {
 			}
 			return false;
 		}
-		private final boolean pinyinMatchesBackwards(String searchTerm, int entryIndex, boolean simplified) {
+		private final boolean pinyinMatchesBackwards(String searchTerm, Entry entry, boolean simplified) {
 			/*
 			 * Search functionality for search results that end with a Chinese character.
 			 * Example:
 			 * "hua板" matches "滑板" (pronounced huaban)
 			 */
-			String chinese = simplified ? searchEntries[entryIndex].simplified : searchEntries[entryIndex].traditional;
+			String chinese = simplified ? entry.simplified : entry.traditional;
 			for (int i = 0; i < searchTerm.length(); i++) {
 				String substring = searchTerm.substring(i);
 				for (int ii = 1; ii < chinese.length(); ii++) {
 					if (substring.equals(chinese.substring(ii))) {
 						String pinyinSearchTerm = searchTerm.substring(0, i);
-						String pinyinSearchEntry = searchEntries[entryIndex].pinyinRaw.substring(0, 
-								1 + nthIndexOfChar(searchEntries[entryIndex].pinyinRaw, ii, ' '))
+						String pinyinSearchEntry = entry.searchEntry.pinyinRaw.substring(0, 
+								1 + nthIndexOfChar(entry.searchEntry.pinyinRaw, ii, ' '))
 								.replace(" ", "");
 
 						if (searchMatches(pinyinSearchTerm, pinyinSearchEntry)
@@ -456,20 +465,244 @@ final class GUI extends AbstractGUI {
 						);
 					}
 					textField.requestFocus();
+					textField.setCaretPosition(1 + start);
 				}
 			});
 		}
 	}
 	
-	//About option click
+	// Double-click Dictionary Entry window ////////////////////////
+	static final int MAX_EXAMPLE_SENTENCES = 10;
+	@Override
+	void jList_doubleClick(int index) {
+		showEntryWindow(searchWorker.options[index]);
+	}
+	static final Insets ITEM_INSETS = new Insets(2, -20, 2, 2);
+	static final KeyStroke CTRL_C = KeyStroke.getKeyStroke("control C");
+	void showEntryWindow(Entry entry) {
+		/*
+		 * Show the entry window of a Dictionary entry
+		 */
+		final boolean simplified = characterOption == CHARACTER_SIMPLIFIED;
+		JDialog window = new JDialog(this, true);
+		window.setTitle(TITLE);
+		JTextPane jTextPane = new JTextPane();
+		jTextPane.setEditable(false);
+		jTextPane.setContentType("text/html");
+		jTextPane.setText(createHtml(entry, simplified));
+		jTextPane.setCaretPosition(0);
+		JScrollPane jScrollPane = new JScrollPane(jTextPane);
+		jScrollPane.setBorder(new EmptyBorder(0,0,0,0));
+		window.add(jScrollPane);
+		window.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+		MouseListener mouseListener = new MouseListener() {
+			@Override public void mouseClicked(MouseEvent arg0) {}
+			@Override public void mouseEntered(MouseEvent arg0) {}
+			@Override public void mouseExited(MouseEvent arg0) {}
+			@Override public void mousePressed(MouseEvent arg0) {}
+			@Override public void mouseReleased(MouseEvent arg0) {
+				/*
+				 * Open context menu when a Chinese word
+				 * is selected
+				 */
+				if (arg0.getButton() != MouseEvent.BUTTON1)
+					return;
+				String selection = jTextPane.getSelectedText();
+				if (selection == null)
+					return;
+				
+				// Try to match selection
+				Entry match = null;
+				if (simplified) {
+					for (Entry entry: dictionary)
+						if (entry.simplified.equals(selection)) {
+							match = entry;
+							break;
+						}
+				}
+				else {
+					for (Entry entry: dictionary)
+						if (entry.traditional.equals(selection)) {
+							match = entry;
+							break;
+						}
+				}
+				
+				// Show popup menu
+				if (match != null) {
+					JPopupMenu menu = new JPopupMenu();
+						JMenuItem pinyinItem = new JMenuItem(selection + ": " + match.styledPinyin);
+							pinyinItem.setMargin(ITEM_INSETS);
+							menu.add(pinyinItem);
+						for (int i = 0; i < match.definitions.length && i < 3; i++) {
+							JMenuItem definitionItem = new JMenuItem("- " + Entry.styleDefinition(match.definitions[i], simplified));
+							definitionItem.setMargin(ITEM_INSETS);
+							menu.add(definitionItem);
+						}
+						menu.addSeparator();
+						JMenuItem copyItem = new JMenuItem("Copy");
+							copyItem.setMargin(ITEM_INSETS);
+							copyItem.setAccelerator(CTRL_C);
+							menu.add(copyItem);
+					menu.show(jTextPane, arg0.getX(), arg0.getY() + 25);
+				}
+			}
+		};
+		jTextPane.addMouseListener(mouseListener);
+		jTextPane.addHyperlinkListener(new HyperlinkListener() {
+			@Override
+			public void hyperlinkUpdate(HyperlinkEvent e) {
+				if (e.getEventType() != HyperlinkEvent.EventType.ACTIVATED)
+					return;
+				Element elmnt = e.getSourceElement();
+				jTextPane.setSelectionStart(elmnt.getStartOffset());
+				jTextPane.setSelectionEnd(elmnt.getEndOffset());
+				Rectangle mousePos = null;
+				try {
+					mousePos = jTextPane.modelToView(elmnt.getEndOffset());
+				} catch (BadLocationException e2) {
+					e2.printStackTrace();
+				}
+				MouseEvent me = new MouseEvent(jTextPane, -1, -1, -1, mousePos.x, mousePos.y, -1, -1, 1, false, MouseEvent.BUTTON1);
+				mouseListener.mouseReleased(me);
+			}
+		});
+		window.setSize(300, 250);
+		window.setLocationRelativeTo(this);
+		window.setVisible(true);
+	}
+	String createHtml(Entry entry, boolean simplified) {
+		/*
+		 * Create the JTextPane html
+		 * to use for the Entry window
+		 */
+		final boolean differs = !entry.simplified.equals(entry.traditional);
+		
+		StringBuilder html = new StringBuilder();
+		if (simplified) {
+			html.append("<font face=\"" + font_GoogleNoto.getFamily() + "\"size=\"6\">" + entry.simplified + "<br></font>");
+			if (differs)
+				html.append("<font face=\"" + font_GoogleNoto.getFamily() + "\"size=\"5\">" + entry.traditional + "<br></font>");
+		} else {
+			html.append("<font face=\"" + font_GoogleNoto.getFamily() + "\"size=\"6\">" + entry.traditional + "<br></font>");
+			if (differs)
+				html.append("<font face=\"" + font_GoogleNoto.getFamily() + "\"size=\"5\">" + entry.simplified + "<br></font>");
+		}
+		html.append("<hr><font face=\"" + font_GoogleNoto.getFamily() + "\" size=\"5\">" + entry.styledPinyin + "<br></font>");
+		html.append("<font face=\"" + font_GoogleNoto.getFamily() + "\" size=\"4\">");
+		for (String definition: entry.definitions) {
+			html.append("- " + Entry.styleDefinition(definition, simplified) + "<br>");
+		}
+		Set<String> addedSentences = new HashSet<>(); //prevent duplicates
+		int i = 0;
+		for (int ii: entry.exampleSentences) {
+			if (i >= MAX_EXAMPLE_SENTENCES)
+				break;
+			ExampleSentence es = Entry.EXAMPLE_SENTENCES.get(ii);
+			String chineseSentence = simplified ? es.simplified : es.traditional;
+			if (chineseSentence.length() > 30)
+				continue;
+			if (addedSentences.contains(chineseSentence)) {
+				i++;
+				continue;
+			}
+			addedSentences.add(chineseSentence);
+			html.append("<font face=\"" + jTextField.getFont().getFamily() + "\" size=\"4\">");
+			html.append("<br>" + es.english);
+			html.append("</font><font face=\"" + font_GoogleNoto.getFamily() + "\" size=\"5\">");
+			html.append("<br>" + dissect(chineseSentence, dissectedExampleSentences[ii]) + "<br></font>");
+			i++;
+		}
+		return html.toString();
+	}
+	static final class Index {
+		final int start, end;
+		Index(int start,int end){this.start=start;this.end=end;}
+	}
+	String dissect(String chinese, Index[] indexes) {
+		StringBuilder sb = new StringBuilder();
+		for (int i = 0; i < chinese.length();) {
+			for (Index ind: indexes) {
+				if (ind.start == i) {
+					String word = chinese.substring(ind.start, ind.end);
+					sb.append("<a href=\"");
+					sb.append(word);
+					sb.append("\">");
+					sb.append(word);
+					sb.append("</a>");
+					i += ind.end - ind.start;
+					continue;
+				}
+			}
+			sb.append(chinese.charAt(i++));
+		}
+		return sb.toString();
+	}
+	List<Index> dissectChineseSentence(String chinese) {
+		/*
+		 * Separate a Chinese sentence into
+		 * dictionary entries.
+		 * 
+		 * Example:
+		 * sentence = "他们是热爱和平的人。"
+		 * 
+		 * parts = "他们", "是", "热爱", "和平", "的", "人"
+		 */
+		List<Index> indexes = new ArrayList<>();
+		for (int i = 0; i < chinese.length();) {
+			int index = dissectOne(chinese, i);
+			if (index == -1) {
+				i++;
+				continue;
+			}
+			indexes.add(new Index(i, index));
+			i += index - i;
+		}
+		return indexes;
+	}
+	private int dissectOne(String chinese, int index) {
+		for (int i = chinese.length(); i >= index; i--) {
+			String wordSearch = chinese.substring(index, i);
+			Entry entry = findEntry(wordSearch);
+			if (entry != null)
+				return i;
+		}
+		return -1;
+	}
+	Entry findEntry(String chinese) {
+		for (Entry entry: dictionary) {
+			if (entry.simplified.equals(chinese))
+				return entry;
+			else if (entry.traditional.equals(chinese))
+				return entry;
+		}
+		return null;
+	}
+	static List<Integer> indexesOfSubstring(String str, String substr){
+		List<Integer> result = new ArrayList<Integer>();
+		int lastIndex = 0;
+		while(lastIndex != -1) {
+			lastIndex = str.indexOf(substr, lastIndex);
+			if(lastIndex != -1){
+		        result.add(lastIndex);
+		        lastIndex += 1;
+		    }
+		}
+		return result;
+	}
+	
+	//About option click //////////////////
 	@Override
 	void aboutOption_click() {
 		JOptionPane.showMessageDialog(
 				this,
-				"Bleco written by porog\n"
+				"Bleco v1.0b-alpha written by porog\n"
 						+ "https://github.com/sahlaysta/bleco\n\n"
-						+ "CC-CEDICT belongs to MDBG: https://cc-cedict.org/wiki/\n\n"
-						+ "HanziLookup belongs to Jordan Kiang: https://www.kiang.org/jordan/software/hanzilookup/",
+						+ "CC-CEDICT belongs to MDBG: https://cc-cedict.org/wiki/\n"
+						+ "Example sentences belong to Tatoeba: https://tatoeba.org/en/\n"
+						+ "HanziLookup belongs to Jordan Kiang: https://www.kiang.org/jordan/software/hanzilookup/\n"
+						+ "ZHConverter belongs to Google: https://code.google.com/archive/p/java-zhconverter/\n"
+						+ "Google Noto Sans Font belongs to Google: https://www.google.com/get/noto/#sans-lgc",
 				"About",
 				JOptionPane.INFORMATION_MESSAGE);
 	}
