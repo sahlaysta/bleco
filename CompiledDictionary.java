@@ -172,7 +172,7 @@ final class CompiledDictionary {
 			int read;
 			boolean delimiter;
 			BufferedReader br = new BufferedReader(new InputStreamReader(
-					TatoebaReader.class.getResourceAsStream("tatoeba.tsv"),
+					TatoebaReader.class.getResourceAsStream("resources/tatoeba.tsv"),
 					StandardCharsets.UTF_8));
 			List<ExampleSentence> parseTatoeba() throws IOException {
 				List<ExampleSentence> output = new ArrayList<>();
