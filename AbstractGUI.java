@@ -1,13 +1,17 @@
 package bleco;
 
 import java.awt.BorderLayout;
+import java.awt.Font;
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 
 import javax.swing.DefaultListModel;
 import javax.swing.JCheckBoxMenuItem;
 import javax.swing.JFrame;
+import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
@@ -15,15 +19,13 @@ import javax.swing.JMenuItem;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextField;
+import javax.swing.ListSelectionModel;
+import javax.swing.SwingConstants;
 import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
 import javax.swing.border.EmptyBorder;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
-import javax.swing.text.AbstractDocument;
-import javax.swing.text.AttributeSet;
-import javax.swing.text.BadLocationException;
-import javax.swing.text.DocumentFilter;
 
 abstract class AbstractGUI extends JFrame {
 	private static final long serialVersionUID = 1L;
@@ -31,8 +33,10 @@ abstract class AbstractGUI extends JFrame {
 	abstract void jTextField_changed(String text);
 	abstract void handwritingOption_click(boolean checked);
 	abstract void characterOption_changed(int option);
+	abstract void jList_doubleClick(int index);
 	abstract void aboutOption_click();
 	
+	static final String TITLE = "Bleco";
 	JTextField jTextField;
 	DefaultListModel<String> listModel;
 	JList<String> jList;
@@ -41,7 +45,7 @@ abstract class AbstractGUI extends JFrame {
 		setDefaultCloseOperation(EXIT_ON_CLOSE);
 		setLocationRelativeTo(null);
 		setSize(350, 250);
-		setTitle("Bleco");
+		setTitle(TITLE);
 		try {
 			UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
 			themed = true;
@@ -111,6 +115,14 @@ abstract class AbstractGUI extends JFrame {
 		jList = new JList<>(listModel);
 		jList.setBorder(new EmptyBorder(3,9,3,9));
 		jList.setFont(jList.getFont().deriveFont(15f));
+		jList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+		jList.addMouseListener(new MouseAdapter() {
+		    public void mouseClicked(MouseEvent evt) {
+	            // Double-click detected
+		        if (evt.getClickCount() == 2)
+		            jList_doubleClick(jList.locationToIndex(evt.getPoint()));
+		    }
+		});
 		JScrollPane jScrollPane = new JScrollPane(jList);
 		jScrollPane.setBorder(new EmptyBorder(0,0,0,0));
 		mainPanel.add(jScrollPane, BorderLayout.CENTER);
@@ -132,25 +144,10 @@ abstract class AbstractGUI extends JFrame {
 				jTextField_changed(jTextField.getText());
 			}
 		});
-		((AbstractDocument) jTextField.getDocument()).setDocumentFilter(new DocumentFilter() { // disable spaces in text field
-			@Override
-	        public void insertString(FilterBypass fb, int offs, String str, AttributeSet a) throws BadLocationException {
-	            if (str == null || str.indexOf(' ') != -1 || str.indexOf('\'') != -1) {
-	                return;
-	            }
-
-	            super.insertString(fb, offs, str, a);
-	        }
-
-	        @Override
-	        public void replace(FilterBypass fb, int offset, int length, String str, AttributeSet attrs) throws BadLocationException {
-	        	if (str == null || str.indexOf(' ') != -1 || str.indexOf('\'') != -1) {
-	                return;
-	            }
-
-	            fb.replace(offset, length, str, attrs);
-	        }
-		});
+		
+		
+		//Set focus
+		jTextField.requestFocus();
 	}
 	
 	public static final int CHARACTER_SIMPLIFIED = 0, CHARACTER_TRADITIONAL = 1; //character enum
@@ -166,6 +163,32 @@ abstract class AbstractGUI extends JFrame {
 			traditionalOption.setSelected(true);
 			break;
 		}
+		}
+	}
+	
+	// Loading screen
+	JPanel loadingPanel;
+	private JPanel createLoadingPanel() {
+		JPanel output = new JPanel();
+		output.setBorder(new EmptyBorder(0,0,30,0));
+		output.setLayout(new BorderLayout());
+		output.setBackground(getBackground());
+		JLabel loadingLabel = new JLabel("Loading dictionary...", SwingConstants.CENTER);
+		Font font = loadingLabel.getFont().deriveFont(18f);
+		loadingLabel.setFont(font);
+		loadingLabel.setEnabled(false);
+		output.add(loadingLabel, BorderLayout.CENTER);
+		return output;
+	}
+	public void setLoading(boolean loading) {
+		if (loading) {
+			setVisible(true);
+			loadingPanel = createLoadingPanel();
+			add(loadingPanel);
+			repaint();
+		} else {
+			remove(loadingPanel);
+			loadingPanel = null;
 		}
 	}
 }
