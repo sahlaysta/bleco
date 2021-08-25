@@ -9,6 +9,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 
 import javax.swing.DefaultListModel;
+import javax.swing.ImageIcon;
 import javax.swing.JCheckBoxMenuItem;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -46,6 +47,7 @@ abstract class AbstractGUI extends JFrame {
 		setLocationRelativeTo(null);
 		setSize(350, 250);
 		setTitle(TITLE);
+		setIconImage(new ImageIcon(getClass().getResource("icon.png")).getImage());
 		try {
 			UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
 			themed = true;
