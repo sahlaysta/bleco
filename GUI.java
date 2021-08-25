@@ -773,7 +773,7 @@ final class GUI extends AbstractGUI {
 	void aboutOption_click() {
 		JOptionPane.showMessageDialog(
 				this,
-				"Bleco v1.0c-alpha written by porog\n"
+				"Bleco v1.0d-alpha written by porog\n"
 						+ "https://github.com/sahlaysta/bleco\n\n"
 						+ "CC-CEDICT belongs to MDBG: https://cc-cedict.org/wiki/\n"
 						+ "Example sentences belong to Tatoeba: https://tatoeba.org/en/\n"
