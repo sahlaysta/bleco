@@ -47,7 +47,7 @@ abstract class AbstractGUI extends JFrame {
 		setLocationRelativeTo(null);
 		setSize(350, 250);
 		setTitle(TITLE);
-		setIconImage(new ImageIcon(getClass().getResource("icon.png")).getImage());
+		setIconImage(new ImageIcon(getClass().getResource("resources/icon.png")).getImage());
 		try {
 			UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
 			themed = true;
