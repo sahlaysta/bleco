@@ -266,7 +266,7 @@ public final class GUI extends JFrame {
 		about.addActionListener(e->{
 			JOptionPane.showMessageDialog(
 				this,
-				"Bleco v1.1a written by porog\n"
+				"Bleco v1.1b written by porog\n"
 					+ "https://github.com/sahlaysta/bleco\n\n"
 					+ "CC-CEDICT belongs to MDBG:"
 					+ "https://cc-cedict.org/wiki/\n"
@@ -648,8 +648,6 @@ public final class GUI extends JFrame {
 		this.fontSize = fontSize;
 		searchField.setFont(new Font(font, Font.PLAIN, fontSize));
 		searchResultList.setFont(new Font(font, Font.PLAIN, fontSize + 2));
-		if (handwritingWindow != null)
-			handwritingWindow.setFont(new Font(font, Font.PLAIN, fontSize));
 		revalidate();
 		repaint();
 	}
@@ -1199,7 +1197,7 @@ public final class GUI extends JFrame {
 		handwritingWindow = new HandwritingWindow(
 				this,
 				searchField,
-				new Font(font, Font.PLAIN, fontSize));
+				new Font(font, Font.PLAIN, fontSize + 2));
 		handwritingWindow.setDefaultCloseOperation(
 				JDialog.DO_NOTHING_ON_CLOSE);
 		handwritingWindow.addWindowListener(new WindowAdapter() {

@@ -123,12 +123,6 @@ final class HandwritingWindow extends JDialog {
 		return components;
 	}
 	
-	//Sets the HanziLookup character font
-	@Override
-	public void setFont(Font font) {
-		hanziLookup.setFont(font);
-	}
-	
 	
 	/* Inputs the selected Chinese character into
 	 * the registered JTextComponent */
