@@ -15,5 +15,3 @@ Example sentences (double-click)
 CC-CEDICT belongs to MDBG: https://cc-cedict.org/wiki/<br>
 Example sentences belong to Tatoeba: https://tatoeba.org/en/<br>
 HanziLookup belongs to Jordan Kiang: https://www.kiang.org/jordan/software/hanzilookup/<br>
-ZHConverter belongs to Google: https://code.google.com/archive/p/java-zhconverter/<br>
-Google Noto Sans Font belongs to Google: https://www.google.com/get/noto/#sans-lgc
