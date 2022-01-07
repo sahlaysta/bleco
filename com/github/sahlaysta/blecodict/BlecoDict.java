@@ -49,10 +49,10 @@ import com.github.sahlaysta.cccedict.CCCEDICTPinyin;
  * */
 public final class BlecoDict {
 	
-	private BlecoDict() {} //Invis constructor
+	private BlecoDict() {}
 	
 	
-	/** Main code block of {@link BlecoDict}
+	/** Main of {@link BlecoDict}
 	 * 
 	 * @param args args to generate .blecodict, format:<br>
 	 * <code>blecodict.jar cedict_ts.u8 cmn_sentences.tsv
@@ -67,9 +67,9 @@ public final class BlecoDict {
 		if (args.length == 0) {
 			cccedictFile = consolePromptFile("CC-CEDICT");
 			tatoeba1File = consolePromptFile(
-					"Tatoeba Chinese sentences");
+				"Tatoeba Chinese sentences");
 			tatoeba2File = consolePromptFile(
-					"Tatoeba Chinese-English sentences");
+				"Tatoeba Chinese-English sentences");
 			outputFile = consolePromptFile("output");
 		} else if (args.length == 4) {
 			cccedictFile = new File(args[0]);
@@ -88,10 +88,10 @@ public final class BlecoDict {
 		
 		try {
 			generateBlecoDict(
-					cccedictFile,
-					tatoeba1File,
-					tatoeba2File,
-					outputFile);
+				cccedictFile,
+				tatoeba1File,
+				tatoeba2File,
+				outputFile);
 		} catch (IOException e) {
 			e.printStackTrace();
 			consoleExit();
@@ -99,7 +99,7 @@ public final class BlecoDict {
 	}
 	static final void consoleExit() {
 		System.out.println(
-				"\r\nPress enter key to exit...");
+			"\r\nPress enter key to exit...");
 		try {
 			System.in.read();
 		} catch (IOException e) {
@@ -111,10 +111,10 @@ public final class BlecoDict {
 	File consolePromptFile(String fileDescription) {
 		File result = null;
 		System.out.println(
-				"Enter the path of the "
-				+ fileDescription + " file: ");
+			"Enter the path of the "
+			+ fileDescription + " file: ");
 		BufferedReader br = new BufferedReader(
-				new InputStreamReader(System.in));
+			new InputStreamReader(System.in));
 		try {
 			String consoleInput = br.readLine();
 			result = new File(consoleInput);
@@ -152,6 +152,8 @@ public final class BlecoDict {
 
 		IndexedChineseSearchData
 			.writeData(dos, cccedict);
+		IndexedEnglishSearchData
+			.writeData(dos, cccedict);
 		IndexedPinyinSearchData
 			.writeData(dos, cccedict);
 		
@@ -165,7 +167,7 @@ public final class BlecoDict {
 	static final void writeExampleSentences(
 			DataOutputStream dos,
 			ExampleSentence[] exampleSentences)
-					throws IOException {
+				throws IOException {
 		dos.writeInt(exampleSentences.length);
 		for (ExampleSentence es: exampleSentences) {
 			writeString(dos, es.chinese);
@@ -175,30 +177,36 @@ public final class BlecoDict {
 	
 	//write Chinese-English dictionary entries
 	static final void writeEntries(
-			DataOutputStream dos,
-			Collection<CCCEDICTEntry> entries,
-			ExampleSentence[] exampleSentences)
-					throws IOException {
+		DataOutputStream dos,
+		Collection<CCCEDICTEntry> entries,
+		ExampleSentence[] exampleSentences)
+			throws IOException {
+		
 		MultiValueMap<Integer, Integer> mvm
 			= ExampleSentence.multiValueMap(
-					exampleSentences);
+				exampleSentences);
 		dos.writeInt(entries.size());
 		for (CCCEDICTEntry entry: entries) {
 			writeEntry(
-					dos,
-					entry,
-					ExampleSentence
-						.indexesOf(
-								entry,
-								exampleSentences,
-								mvm));
+				dos,
+				entry,
+				IndexedEnglishSearchData
+					.normalizeDefinitions(
+						entry),
+				ExampleSentence
+					.indexesOf(
+						entry,
+						exampleSentences,
+						mvm));
 		}
 	}
 	static final void writeEntry(
-			DataOutputStream dos,
-			CCCEDICTEntry entry,
-			int[] exampleSentenceIndexes)
-					throws IOException {
+		DataOutputStream dos,
+		CCCEDICTEntry entry,
+		String[] normalizedDefinitions,
+		int[] exampleSentenceIndexes)
+			throws IOException {
+		
 		writeString(dos, entry.simplified);
 		writeString(dos, entry.traditional);
 		writeString(dos, entry.pronunciation);
@@ -207,15 +215,17 @@ public final class BlecoDict {
 		dos.write(entry.definitions.size());
 		for (String str: entry.definitions)
 			writeString(dos, str);
+		for (String str: normalizedDefinitions)
+			writeString(dos, str);
 		dos.writeInt(exampleSentenceIndexes.length);
 		for (int i: exampleSentenceIndexes)
 			dos.writeInt(i);
 	}
 	
 	static final void writeString(
-			DataOutputStream dos,
-			String str)
-					throws IOException {
+		DataOutputStream dos,
+		String str)
+			throws IOException {
 		byte[] b = str.getBytes(
 				StandardCharsets.UTF_8);
 		dos.writeChar(b.length);

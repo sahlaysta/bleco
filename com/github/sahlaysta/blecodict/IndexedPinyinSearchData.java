@@ -18,7 +18,7 @@ final class IndexedPinyinSearchData {
 		writeData(
 			DataOutputStream dos,
 			List<CCCEDICTEntry> cccedict)
-						throws IOException {
+					throws IOException {
 
 		/* MultiValueMap, maps the substring of
 		 * first 2 characters of every entry,
@@ -33,7 +33,7 @@ final class IndexedPinyinSearchData {
 			.CollectionManager<Integer>() {
 				@Override
 				public Collection<Integer>
-							newCollection() {
+						newCollection() {
 					return new LinkedHashSet<>();
 				}
 			});
@@ -43,35 +43,43 @@ final class IndexedPinyinSearchData {
 					continue;
 			
 			String key = e.pronunciation.substring(0, 2)
-									.toLowerCase();
+				.toLowerCase();
 			mvm.put(key, i);
 			
-			/* Map pinyin with tones, for example
-			 * the pinyin entry 'a1 fu4',
-			 * to both 'af' and 'a1' */
+			/* Map short pinyin with tones, for example
+			 * map the pinyin entry 'a1 fu4',
+			 * to 'af' and 'a1' and 'a ' */
 			if (e.pronunciation.length() > 3) {
 				switch (key.charAt(1)) {
 				case '1': case '2': case '3':
 				case '4': case '5':
 					key = new String(
-							new char[] {
-									key.charAt(0),
-									e.pronunciation
-										.charAt(3) })
-							.toLowerCase();
+						new char[] {
+							key.charAt(0),
+							e.pronunciation
+								.charAt(3) })
+						.toLowerCase();
 					mvm.put(key, i);
 				}
 			}
-			if (e.pronunciation.length() > 2) {
-				if (key.charAt(1) == ' ') {
-					key = new String(
-							new char[] {
-									key.charAt(0),
-									e.pronunciation
-										.charAt(2) })
-							.toLowerCase();
-					mvm.put(key, i);
-				}
+			if (e.pronunciation.length() > 2
+				&& key.charAt(1) == ' ') {
+				key = new String(
+					new char[] {
+						key.charAt(0),
+						e.pronunciation
+							.charAt(2) })
+					.toLowerCase();
+				mvm.put(key, i);
+			}
+			if (e.pronunciation.length() > 3
+				&& e.pronunciation.charAt(2) == ' ') {
+				key = new String(
+					new char[] {
+						key.charAt(0),
+						' ' })
+					.toLowerCase();
+				mvm.put(key, i);
 			}
 		}
 		

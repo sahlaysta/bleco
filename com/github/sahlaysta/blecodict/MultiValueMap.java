@@ -52,7 +52,7 @@ final class MultiValueMap<K, V>
 		int highest = Integer.MIN_VALUE;
 		MVMNode<K, Collection<V>> result = null;
 		Iterator<MVMNode<K, Collection<V>>> it
-						= iterator();
+			= iterator();
 		while (it.hasNext()) {
 			MVMNode<K, Collection<V>> m = it.next();
 			int size = m.value.size();
@@ -70,7 +70,7 @@ final class MultiValueMap<K, V>
 		int lowest = Integer.MAX_VALUE;
 		MVMNode<K, Collection<V>> result = null;
 		Iterator<MVMNode<K, Collection<V>>> it
-						= iterator();
+			= iterator();
 		while (it.hasNext()) {
 			MVMNode<K, Collection<V>> m = it.next();
 			int size = m.value.size();
@@ -88,7 +88,7 @@ final class MultiValueMap<K, V>
 	
 	public void forEach(
 		BiConsumer<? super K, ? super Collection<V>>
-											action) {
+				action) {
 		map.forEach((k, v) -> action.accept(k, v));
 	}
 	
@@ -122,7 +122,7 @@ final class MultiValueMap<K, V>
 			public void forEachRemaining(
 					Consumer<? super
 					MultiValueMap.MVMNode<K, Collection<V>>>
-										action) {
+							action) {
 				it.forEachRemaining((e) -> {
 					action.accept(
 						new MultiValueMap.MVMNode<>(

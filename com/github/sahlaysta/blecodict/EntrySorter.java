@@ -16,7 +16,7 @@ import com.github.sahlaysta.cccedict.CCCEDICTEntry;
 
 final class EntrySorter {
 	
-	//Sort chinese entries by word frequency
+	//Sort dictionary entries by word frequency
 	static final void sort(
 			List<CCCEDICTEntry> cccedict,
 			File tatoebaFile)
@@ -129,10 +129,22 @@ final class EntrySorter {
 				&& entry.definitions.get(0)
 				.equals("what"))
 			score += 5;
-		if (entry.simplified.equals("没")
+		else if (entry.simplified.equals("没")
 				&& entry.definitions.get(0)
 				.equals("(negative prefix for verbs)"))
 			score += 5;
+		else if (entry.simplified.equals("听")
+				&& entry.definitions.get(0)
+				.equals("to listen"))
+			score += 20000;
+		else if (entry.simplified.equals("着")
+				&& entry.definitions.get(0)
+				.startsWith("aspect particle"))
+			score += 5;
+		else if (entry.simplified.equals("厂")
+				&& entry.definitions.get(0)
+				.equals("factory"))
+			score += 20000;
 		
 		return score;
 		
@@ -142,7 +154,7 @@ final class EntrySorter {
 	//parse tatoeba.tsv
 	private static final
 	String[] parseTatoeba(File tatoebaFile)
-						throws IOException {
+				throws IOException {
 		List<String> result = new ArrayList<>();
 		BufferedReader br
 			= new BufferedReader(

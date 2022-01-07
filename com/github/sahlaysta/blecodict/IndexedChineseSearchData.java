@@ -19,7 +19,7 @@ final class IndexedChineseSearchData {
 	writeData(
 		DataOutputStream dos,
 		List<CCCEDICTEntry> cccedict)
-					throws IOException {
+				throws IOException {
 		
 		//Add lowest byte of code points
 		MultiValueMap<Byte, Integer> mvm
@@ -74,15 +74,15 @@ final class IndexedChineseSearchData {
 				mvm.put(translate(codePoint), index);
 				if (codePoint <= 9000) { //if english letter
 					mvm.put(
-							translate(
-									Character.toUpperCase(
-										(char)codePoint)),
-							index);
+						translate(
+							Character.toUpperCase(
+								(char)codePoint)),
+						index);
 					mvm.put(
-							translate(
-									Character.toLowerCase(
-										(char)codePoint)),
-							index);
+						translate(
+							Character.toLowerCase(
+								(char)codePoint)),
+						index);
 				}
 			});
 	}

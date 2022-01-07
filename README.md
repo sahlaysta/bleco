@@ -1,16 +1,26 @@
 # bleco
-Chinese-English dictionary UI for Desktop, inspired by Pleco
+Chinese-English and English-Chinese dictionary UI for Desktop, inspired by Pleco
 
-<img src="https://i.imgur.com/aRGkVhV.png"/>
+<img src="https://i.imgur.com/x4xQ6d0.png"/>
 <hr>
 Handwriting feature
-<img src="https://i.imgur.com/iI9HRrR.png"/>
+<img src="https://i.imgur.com/kjKTM3q.png"/>
 <hr>
 Sentence split
-<img src="https://i.imgur.com/lahD1po.png"/>
+<img src="https://i.imgur.com/336uVgw.png"/>
 <hr>
 Example sentences (double-click)
-<img src="https://i.imgur.com/MueAPbp.png">
+<img src="https://i.imgur.com/K651Tdg.png">
+<hr>
+<b>Shortcuts:</b><br>
+Down / Tab : move down 1 index<br>
+Up / Shift Tab : move up 1 index<br>
+Page down : move down 5 indexes<br>
+Page up: move up 5 indexes<br>
+Enter : open entry<br>
+Enter / Tab / Backspace: close entry<br>
+Down / up : scroll entry vertically<br>
+Page up / Page down : heavy scroll entry vertically
 <hr>
 CC-CEDICT belongs to MDBG: https://cc-cedict.org/wiki/<br>
 Example sentences belong to Tatoeba: https://tatoeba.org/en/<br>
