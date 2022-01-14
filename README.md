@@ -2,6 +2,7 @@
 Chinese-English and English-Chinese dictionary UI for Desktop, inspired by Pleco
 
 <img src="https://i.imgur.com/x4xQ6d0.png"/>
+<img src="https://i.imgur.com/Cbg2doC.png"/>
 <hr>
 Handwriting feature
 <img src="https://i.imgur.com/kjKTM3q.png"/>
