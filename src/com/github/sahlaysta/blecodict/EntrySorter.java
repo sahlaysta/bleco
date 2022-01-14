@@ -20,7 +20,7 @@ final class EntrySorter {
 	static final void sort(
 			List<CCCEDICTEntry> cccedict,
 			File tatoebaFile)
-						throws IOException {
+				throws IOException {
 		
 		//parse chinese sentences
 		String[] chineseSentences =
@@ -145,6 +145,10 @@ final class EntrySorter {
 				&& entry.definitions.get(0)
 				.equals("factory"))
 			score += 20000;
+		else if (entry.simplified.equals("后")
+				&& entry.definitions.get(0)
+				.equals("back"))
+			score += 130000;
 		
 		return score;
 		
@@ -154,7 +158,7 @@ final class EntrySorter {
 	//parse tatoeba.tsv
 	private static final
 	String[] parseTatoeba(File tatoebaFile)
-				throws IOException {
+			throws IOException {
 		List<String> result = new ArrayList<>();
 		BufferedReader br
 			= new BufferedReader(

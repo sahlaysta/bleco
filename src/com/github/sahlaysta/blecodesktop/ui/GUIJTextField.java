@@ -159,7 +159,7 @@ final class GUIJTextField extends JTextField {
 		ActionMap am = (ActionMap)UIManager.get("TextField.actionMap");
 		InputMap im = (InputMap)UIManager.get("TextField.focusInputMap");
 		
-		/** Disable the beep sound when you
+		/* Disable the beep sound when you
 		 * backspace in a text field while
 		 * it is empty / the caret position
 		 * is at the beginning */

@@ -24,6 +24,8 @@ final class GUIController {
 		gui.menuBar.traditional.setSelected(false);
 		Entry.setCharacterType(Entry.SIMPLIFIED_CHINESE);
 		gui.searcher.model.refresh();
+		
+		
 	}
 	//Traditional toggle
 	void traditional() {
@@ -94,16 +96,7 @@ final class GUIController {
 	
 	//---Help---//
 	//Show "About" dialog
-	private static final String ABOUT_MSG
-		= "Bleco v1.1c written by porog\n"
-			+ "https://github.com/sahlaysta/bleco\n\n"
-			+ "CC-CEDICT belongs to MDBG:"
-			+ "https://cc-cedict.org/wiki/\n"
-			+ "Example sentences belong to Tatoeba:"
-			+ "https://tatoeba.org/en/\n"
-			+ "HanziLookup belongs to Jordan Kiang:"
-			+ "https://www.kiang.org/jordan/software/hanzilookup/";
 	void about() {
-		GUIMessageBox.showMsg(gui, "About", ABOUT_MSG);
+		GUIMessageBox.showAboutMsg(gui);
 	}
 }

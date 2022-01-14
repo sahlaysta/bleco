@@ -17,7 +17,7 @@ public class Dictionary {
 	 * @see Dictionary#load(InputStream) */
 	public Dictionary() {}
 	
-	private boolean isDictionaryLoaded;
+	private boolean isDictionaryLoaded = false;
 	
 	//Dictionary
 
@@ -61,47 +61,52 @@ public class Dictionary {
 		//Format input string before search (important)
 		if (search == null || search.isEmpty())
 			return null;
-		String formattedSearch
-			= DictionaryAbstractSearch
-				.formatSearch(search);
+		String formattedSearch = DictionaryAbstractSearch.formatSearch(search);
 		if (formattedSearch.isEmpty())
 			return null;
+
+		//Wildcard search
+		if (formattedSearch.indexOf('*') != -1)
+			return wildcardSearch(formattedSearch);
 		
-		//Search contains chinese
-		boolean chinese = containsChinese(formattedSearch);
-		
-		//Searches
-		List<SearchResult> primarySearch
-			= chinese
-				? chineseSearch.search(formattedSearch)
-				: pinyinSearch.search(formattedSearch);
-		if (primarySearch != null)
-			return Collections.unmodifiableList(primarySearch);
-		
-		List<SearchResult> secondarySearch
-			= chinese
-				? dsh.splitChineseSentence(search)
-				: englishSearch.search(search);
-		if (secondarySearch != null)
-			return Collections.unmodifiableList(secondarySearch);
-		
-		List<SearchResult> tertiarySearch
-			= chinese
-				? englishSearch.search(search)
-				: formattedSearch.indexOf('*') == -1
-					? chineseSearch.search(formattedSearch)
-					: null;
-		if (tertiarySearch != null)
-			return Collections.unmodifiableList(tertiarySearch);
-		
-		return null;
+		//Try searches
+		for (int i = 1; ; i++) {
+			List<SearchResult> result = null;
+			switch (i) {
+			case 1:
+				result = pinyinSearch.search(formattedSearch);
+				break;
+			case 2:
+				result = chineseSearch.search(formattedSearch);
+				break;
+			case 3:
+				result = englishSearch.search(search);
+				break;
+			case 4:
+				result = dsh.splitChineseSentence(search);
+				break;
+			case 5:
+				return null;
+			}
+			if (result != null)
+				return uml(result);
+		}
 	}
-	private static boolean
-	containsChinese(String search) {
+	private static <T> List<T> uml(List<T> list) {
+		//make a list unmodifiable
+		return
+			list == null
+				? null
+				: Collections.unmodifiableList(list);
+	}
+	private List<SearchResult> wildcardSearch(String search) {
+		/* returns null if a search is only
+		 * asterisks (asterisk-only searches
+		 * are inaccurate) */
 		for (int i = 0, len = search.length(); i < len; i++)
-			if (search.charAt(i) > 9000)
-				return true;
-		return false;
+			if (search.charAt(i) != '*')
+				return uml(chineseSearch.search(search));
+		return null;
 	}
 	
 	

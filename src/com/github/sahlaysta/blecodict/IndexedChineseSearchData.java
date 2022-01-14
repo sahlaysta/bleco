@@ -19,7 +19,7 @@ final class IndexedChineseSearchData {
 	writeData(
 		DataOutputStream dos,
 		List<CCCEDICTEntry> cccedict)
-				throws IOException {
+			throws IOException {
 		
 		//Add lowest byte of code points
 		MultiValueMap<Byte, Integer> mvm

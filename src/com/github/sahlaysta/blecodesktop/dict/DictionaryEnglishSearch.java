@@ -130,6 +130,7 @@ final class DictionaryEnglishSearch
 				searchLen = search.length(), searchI = 0,
 				beginIndex = 0;
 			boolean prevCharIsSpace = false;
+			boolean prevIsBegin = true;
 			e2: while (true) {
 				if (searchI >= searchLen)
 					break;
@@ -145,6 +146,8 @@ final class DictionaryEnglishSearch
 						prevCharIsSpace = true;
 						searchI++;
 					}
+					if (prevIsBegin)
+						beginIndex++;
 					defI++;
 					continue;
 				}
@@ -165,16 +168,21 @@ final class DictionaryEnglishSearch
 							defI = j + 1;
 							searchI = 0;
 							beginIndex = j + 1;
+							prevIsBegin = true;
 							continue e2;
 						}
 					}
 					continue e;
 				}
 				
+				prevIsBegin = false;
 				defI++;
 				searchI++;
 			}
 
+			if (prevIsBegin)
+				beginIndex++;
+				
 			//determine full match
 			boolean fullMatch = false;
 			if (defI >= defLen) {

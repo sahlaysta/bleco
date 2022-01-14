@@ -3,7 +3,7 @@ package com.github.sahlaysta.bleco.dict;
 /** Represents a Chinese word match;
  * the result of the
  * {@link Dictionary#findChineseWord(String, int)}
- * method. Maintains three variables: the 
+ * method. Maintains the three variables: the 
  * matched string {@link #str}, the
  * matched {@link #entry}, and the string
  * {@link #index} at which the match was found */

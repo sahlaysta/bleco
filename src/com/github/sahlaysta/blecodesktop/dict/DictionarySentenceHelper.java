@@ -14,7 +14,8 @@ final class DictionarySentenceHelper {
 	}
 	
 	//split chinese sentence into words
-	List<SearchResult> splitChineseSentence(String str) {
+	List<SearchResult> splitChineseSentence(String search) {
+		String str = search.toLowerCase();
 		/* Returns the entries of all the words
 		 * in the Chinese sentence
 		 * e.g. the sentence "我们会法语" 
@@ -124,16 +125,20 @@ final class DictionarySentenceHelper {
 			for (int i = indexFound; i < indexFound + str.length(); i++) {
 				if (
 					(i - indexFound >= str.length() || i >= search.length())
-					||
-					!DictionaryAbstractSearch
-						.charsEqual(
-							search.charAt(i),
-							str.charAt(i - indexFound)))
+					|| !charsEqual(
+						search.charAt(i),
+						str.charAt(i - indexFound)))
 					return false;
 			}
 			return true;
 		}
 	}
+	private static boolean charsEqual(char c1, char c2) {
+		return c1 == c2
+			|| Character.toLowerCase(c1)
+			== Character.toLowerCase(c2);
+	}
+	
 	
 	//returns all indexes of the substring in the string
 	private static final List<Integer>

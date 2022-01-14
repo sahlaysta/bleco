@@ -237,9 +237,10 @@ public class Entry {
 			case '|':
 				for (int ii = i + 1; ii < len; ii++) {
 					switch (definition.charAt(ii)) {
-					//all verified lookbehinds
+					//all verified lookaheads
 					case '[': case ' ': case ',':
 					case ':': case ';': case ')':
+					case '<':
 						i = --ii;
 						continue e;
 					}
@@ -267,8 +268,9 @@ public class Entry {
 				int ii = 0;
 				e2: for (ii = i - 1; ii >= 0; ii--) {
 					switch (definition.charAt(ii)) {
-					//all verified lookaheads
+					//all verified lookbehinds
 					case ':': case ' ': case ',': case '(':
+					case '>':
 						break e2;
 					}
 				}

@@ -154,16 +154,6 @@ final class GUISearcherListCellRenderer extends DefaultListCellRenderer {
 			return comp;
 		if (putHeader)
 			return getHeader(comp, ((SearchResult)value).entry);
-
-		
-		if (value instanceof SearchResult) {
-			SearchResult sr = (SearchResult)value;
-			
-			/* show sentence split header on the first
-			 * match result of every match group */
-			if (sr.isFirstOfSplitGroup)
-				comp = getHeader(comp, sr.entry);
-		}
 		
 		
 		/* set the width of the list to the width
@@ -211,7 +201,7 @@ final class GUISearcherListCellRenderer extends DefaultListCellRenderer {
 						-1,
 						-1);
 		}
-		
+
 		//lazy
 		return
 			"<html>"

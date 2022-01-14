@@ -95,7 +95,7 @@ final class DictionaryPinyinSearch
 				}
 				break;
 				
-			//u cannot match u:
+			//u alone cannot match u:
 			case 'u':
 				if (pinyinLength > (pinyinI + 1)
 					&& pinyin.charAt(pinyinI + 1) == ':'

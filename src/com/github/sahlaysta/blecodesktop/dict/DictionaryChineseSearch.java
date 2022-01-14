@@ -13,6 +13,9 @@ final class DictionaryChineseSearch
 	}
 	
 	
+	//unicode range start for Chinese characters
+	private static final int UNICODE_CHINESE = 127;
+	
 	//Chinese index map
 	
 	/* Chinese search indexing HashMap,
@@ -36,7 +39,7 @@ final class DictionaryChineseSearch
 		for (int i = 0; i < search.length(); ) {
 			int codePoint = search.codePointAt(i);
 			Entry[] entries = getWithCodePoint(codePoint);
-			if (codePoint <= 9000) { //default / non-chinese letter
+			if (codePoint <= UNICODE_CHINESE) { //default / non-chinese letter
 				if (entries != null && lowestSize == Integer.MAX_VALUE) {
 					result = entries;
 					lowestSize--;
@@ -90,9 +93,9 @@ final class DictionaryChineseSearch
 			
 			/* do 'pinyin between chinese' searching
 			 * e.g. 安人 (anren) matches the search term "安ren" */
-			if (searchCodePoint <= 9000 //not Chinese character
-				&& smplCodePoint > 9000
-				&& tradCodePoint > 9000) {
+			if (searchCodePoint <= UNICODE_CHINESE //not Chinese character
+				&& smplCodePoint > UNICODE_CHINESE
+				&& tradCodePoint > UNICODE_CHINESE) {
 				String pinyin = entry.pinyin;
 				
 				/* get nth syllable range in entry pinyin
@@ -115,9 +118,8 @@ final class DictionaryChineseSearch
 				}
 
 				//match pinyin with search (tone optional)
-				e: for (int i = 0;
-						i < pinyinRangeEnd - pinyinRangeStart;
-						i++) {
+				int pinyinLen = pinyinRangeEnd - pinyinRangeStart;
+				e: for (int i = 0; i < pinyinLen; i++) {
 					if (len <= searchI + i)
 						break;
 					char searchC = search.charAt(searchI + i),
@@ -132,8 +134,20 @@ final class DictionaryChineseSearch
 						}
 					}
 					
+					//u alone cannot match u:
+					if (searchC == 'u' && pinyinC == 'u'
+					&& i + pinyinRangeStart + 1 < pinyinRangeEnd
+					&& pinyin.charAt(i + pinyinRangeStart + 1) == ':') {
+						if (len <= searchI + i + 1
+						|| search.charAt(searchI + i + 1) != ':') {
+							return null;
+						}
+						i++;
+						continue;
+					}
+					
 					//check if last char in range is a tone
-					if (i == pinyinRangeEnd - pinyinRangeStart - 1) {
+					if (i == pinyinLen - 1) {
 						switch (pinyinC) {
 						case '1': case '2': case '3':
 						case '4': case '5':
@@ -148,14 +162,14 @@ final class DictionaryChineseSearch
 						return null;
 				}
 				
-				searchI += pinyinRangeEnd - pinyinRangeStart;
+				searchI += pinyinLen;
 				smplI += Character.charCount(smplCodePoint);
 				tradI += Character.charCount(tradCodePoint);
 				syllableCount++;
 				continue;
 				
 			/* Check non-chinese characters */
-			} else if (searchCodePoint <= 9000) {
+			} else if (searchCodePoint <= UNICODE_CHINESE) {
 				char searchC = (char)searchCodePoint,
 					smplC = (char)smplCodePoint;
 				if (!charsEqual(searchC, smplC))

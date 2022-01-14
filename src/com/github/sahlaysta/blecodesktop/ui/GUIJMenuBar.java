@@ -93,7 +93,7 @@ final class GUIJMenuBar extends JMenuBar {
 		KeyStroke ks = KeyStroke.getKeyStroke(shortcut);
 		jmi.setAccelerator(ks);
 
-		/** If the shortcut has no modifier
+		/* If the shortcut has no modifier
 		 * (no ctrl, shift, etc.) and is not a function
 		 * key (F1, F2, etc.), makes its
 		 * key press non-functional */

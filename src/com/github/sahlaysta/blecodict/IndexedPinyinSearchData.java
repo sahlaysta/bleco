@@ -18,7 +18,7 @@ final class IndexedPinyinSearchData {
 		writeData(
 			DataOutputStream dos,
 			List<CCCEDICTEntry> cccedict)
-					throws IOException {
+				throws IOException {
 
 		/* MultiValueMap, maps the substring of
 		 * first 2 characters of every entry,

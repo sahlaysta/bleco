@@ -13,7 +13,7 @@ final class MultiValueMap<K, V>
 	implements Iterable<MVMNode<K, Collection<V>>> {
 	
 	private final Map
-			<K, Collection<V>> map;
+		<K, Collection<V>> map;
 	private final CollectionManager<V> cm;
 	public MultiValueMap(
 			Map<K, Collection<V>> map,

@@ -27,7 +27,7 @@ final class ExampleSentence {
 	 * file */
 	static final ExampleSentence[]
 	parse(File tatoebaFile)
-		throws IOException {
+			throws IOException {
 		List<ExampleSentence> result
 			= new ArrayList<>();
 		

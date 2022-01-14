@@ -182,8 +182,8 @@ final class GUISearcher extends JLayeredPane {
 					? EMPTY_SEARCH
 					: NO_RESULTS);
 		}
-		setSelection(-1);
 	}
+		
 	
 	//increment or decrement list selection
 	void moveSelection(int change) {

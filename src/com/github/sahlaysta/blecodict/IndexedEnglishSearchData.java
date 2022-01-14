@@ -111,7 +111,7 @@ final class IndexedEnglishSearchData {
 	writeData(
 			DataOutputStream dos,
 			List<CCCEDICTEntry> cccedict)
-					throws IOException {
+				throws IOException {
 		
 		/* MultiValueMap, maps the substring of
 		 * first 3 letters of every word of each
