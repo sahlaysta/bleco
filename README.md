@@ -11,7 +11,7 @@ Sentence split
 <img src="https://i.imgur.com/336uVgw.png"/>
 <hr>
 Example sentences (double-click)
-<img src="https://i.imgur.com/K651Tdg.png">
+<img src="https://i.imgur.com/HM2USGS.png">
 <hr>
 <b>Shortcuts:</b><br>
 Down / Tab : move down 1 index<br>
