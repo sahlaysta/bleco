@@ -149,7 +149,8 @@ final class GUISearcher extends JLayeredPane {
 		updateSearch(searchField.getText());
 	}
 	void updateSearch(String search) {
-		new SearchWorker(search).execute();
+		SwingUtilities.invokeLater(() ->
+			new SearchWorker(search).execute());
 	}
 	private List<SearchResult> searchDict(String search) {
 		//forced english search check
