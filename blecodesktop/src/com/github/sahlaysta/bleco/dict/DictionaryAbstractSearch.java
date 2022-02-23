@@ -108,6 +108,6 @@ abstract class DictionaryAbstractSearch<T> {
 	static boolean charsEqual(
 			char searchC, char pinyinC) {
 		return searchC == pinyinC ||
-				searchC == Character.toLowerCase(pinyinC);
+			searchC == Character.toLowerCase(pinyinC);
 	}
 }

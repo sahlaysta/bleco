@@ -50,7 +50,7 @@ final class GUISearcherList extends JComponent {
 	private JScrollBar hjsb;//horizontal scroll bar
 	private JPanel hjsbPanel;//horizontal scrollbar's panel
 	private int hScrollVal;//horizontal scroll value
-	private int hScrollMax;//widest horizontal scroll per search
+	private int hScrollMax;//save widest horizontal scroll per search
 	private int selIndex = -1;//list selection index
 	private void init() {
 		setOpaque(false);
@@ -355,41 +355,123 @@ final class GUISearcherList extends JComponent {
 				&& ((SearchResult)val).isFirstOfSplitGroup;
 		}
 		
+		
+		//mouse usage
 		//process clicks to list component
 		{
 			ML ml = new ML();
 			addMouseListener(ml);
 			addMouseMotionListener(new MML(ml));
 		}
-		/* asynchronously handle mouse
+		
+		/* timer to handle mouse
 		 * down and release + mouse drag */
 		private final class ML extends MouseAdapter {
+			//atomic timer
+			final MLTimer mlt = new MLTimer();
 			final class MLTimer extends Timer {
 				volatile int y;
 				volatile TimerTask tt;
 			}
+			
+			//operate mouse movement
 			final class MLTT extends TimerTask {
 				@Override
 				public void run() {
-					setSelectedIndex(getIndexAtY(mlt.y));
+					mouseUpd();
 				}
 			}
-			final MLTimer mlt = new MLTimer();
+			
+			static final int MIN_OFFSCREEN_JUMP = 8;
+			void mouseUpd() {
+				//ensure search exists
+				if (searchResult == null || searchResultLen == 0)
+					return;
+				
+				//synchronize get mouse y
+				int y;
+				synchronized(mlt) {
+					y = mlt.y;
+				}
+				
+				//mouse dragged offscreen
+				/* (influence scroll speed by how far
+				 * the mouse is offscreen) */
+				int h = getHeight();
+				if (y < 0) {
+					vjsb.setValue(
+						vjsb.getValue() +
+						(y - MIN_OFFSCREEN_JUMP));
+					
+					/* set selection index to the
+					 * topmost visible */
+					int topIndex = getIndexAtY(1);
+					if (topIndex >= 0)
+						setSelectedIndex(topIndex);
+					
+					return;
+				} else if (y > h) {
+					vjsb.setValue(
+						vjsb.getValue() +
+						(y - h) + MIN_OFFSCREEN_JUMP);
+					
+					/* set selection index to the
+					 * bottommost visible */
+					int bottomIndex = getIndexAtY(h - 1);
+					if (bottomIndex >= 0)
+						setSelectedIndex(bottomIndex);
+					
+					return;
+				}
+				
+				//update click to mouse index
+				int mouseIndex = getIndexAtY(y);
+				if (mouseIndex == -2) {
+					//upper outbound mouse
+					setSelectedIndex(0);
+				} else if (mouseIndex == -1) {
+					//lower outbound mouse
+					setSelectedIndex(searchResultLen - 1);
+				} else {
+					//normal
+					setSelectedIndex(mouseIndex);
+				}
+				
+			}
+			
+			//set mouse y (drag)
+			synchronized void setY(int y) {
+				mlt.y = y;
+			}
+			
+			//start mouse drag timer intervals
+			synchronized void startMouseTimer(int y) {
+				mlt.y = y;
+				if (mlt.tt != null)
+					mlt.tt.cancel();
+				mlt.tt = new MLTT();
+				mlt.scheduleAtFixedRate(mlt.tt, 0, 30);
+			}
+			
+			//end timer
+			synchronized void stopMouseTimer() {
+				if (mlt.tt != null) {
+					mlt.tt.cancel();
+					mlt.tt = null;
+				}
+			}
+			
 			@Override
 			public void mousePressed(MouseEvent e) {
-				mlt.y = e.getY();
-				synchronized(mlt) {
-					mlt.tt = new MLTT();
-					mlt.scheduleAtFixedRate(mlt.tt, 0, 30);
-				}
+				startMouseTimer(e.getY());
 			}
 			@Override
 			public void mouseReleased(MouseEvent e) {
-				synchronized(mlt) {
-					mlt.tt.cancel();
-				}
+				stopMouseTimer();
 			}
 		}
+		
+		//handle mouse drag + timer
 		private final class MML extends MouseMotionAdapter {
 			final ML ml;
 			MML(ML ml) {
@@ -397,7 +479,7 @@ final class GUISearcherList extends JComponent {
 			}
 			@Override
 			public void mouseDragged(MouseEvent e) {
-				ml.mlt.y = e.getY();
+				ml.setY(e.getY());
 			}
 		}
 		
@@ -406,7 +488,7 @@ final class GUISearcherList extends JComponent {
 		private int getIndexAtY(int y) {
 			int vY = y + vScrollVal;
 			if (vY < 0)
-				return -1;
+				return -2;
 			int slcY = 0;
 			for (int i = 0; i < searchResultLen; i++) {
 				if (hasHeader(searchResult.get(i)))

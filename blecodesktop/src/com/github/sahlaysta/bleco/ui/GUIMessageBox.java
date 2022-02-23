@@ -118,7 +118,7 @@ final class GUIMessageBox {
 	
 	//About message
 	private static final String ABOUT_MSG = ""
-		+ "Bleco v1.1f written by porog\n"
+		+ "Bleco v1.1g written by porog\n"
 		+ "https://github.com/sahlaysta/bleco\n\n"
 		+ "CC-CEDICT belongs to\nMDBG:\n"
 		+ "https://cc-cedict.org/wiki/\n\n"

@@ -78,6 +78,8 @@ final class GUISearcherEntryPopup {
 		
 		
 		//keyboard controls
+		GUIShortcuts gs = gui.shortcuts;//shortcuts
+		
 		//Backspace, ESC, Enter, and Tab keys close entry
 		textPane.setFocusTraversalKeysEnabled(false);
 		textPane.getActionMap()
@@ -89,7 +91,7 @@ final class GUISearcherEntryPopup {
 					close();
 			}
 		});
-		for (KeyStroke ks: GUIShortcuts.exitEntry)
+		for (KeyStroke ks: gs.exitEntry)
 			textPane.getInputMap().put(ks, "blecoentryclose");
 		
 		//Up arrow and down arrow keys scroll the JScrollPane
@@ -105,7 +107,7 @@ final class GUISearcherEntryPopup {
 				vsb.setValue(vsb.getValue() - scrollIncrement);
 			}
 		});
-		for (KeyStroke ks: GUIShortcuts.up)
+		for (KeyStroke ks: gs.up)
 			textPane.getInputMap().put(ks, scrollUp);
 		textPane.getActionMap()
 		.put(scrollDown, new AbstractAction(scrollDown) {
@@ -116,7 +118,7 @@ final class GUISearcherEntryPopup {
 				vsb.setValue(vsb.getValue() + scrollIncrement);
 			}
 		});
-		for (KeyStroke ks: GUIShortcuts.down)
+		for (KeyStroke ks: gs.down)
 			textPane.getInputMap().put(ks, scrollDown);
 		
 		//Show
@@ -340,7 +342,7 @@ final class GUISearcherEntryPopup {
 			jTextPane.setSelectionEnd(selEnd);
 			
 			//Show entry popup context menu
-			showEntryContextMenu(match.entry, jTextPane, me);
+			showEntryContextMenu(match.entry, jTextPane, me, gui);
 		});
 		
 		/* When Chinese text is selected, show a small popup
@@ -398,12 +400,13 @@ final class GUISearcherEntryPopup {
 					return;
 				
 				//Show entry popup context menu
-				showEntryContextMenu(selectedEntry, jTextPane, e);
+				showEntryContextMenu(
+					selectedEntry, jTextPane, e, gui);
 			}
 		});
 	}
-	private static void
-	showEntryContextMenu(Entry entry, Component invoker, MouseEvent e) {
+	private static void showEntryContextMenu(
+			Entry entry, Component invoker, MouseEvent e, GUI gui) {
 		/* Create a small popup context menu for entry with
 		 * pronunciation and definitions */
 		JPopupMenu jPopupMenu = new JPopupMenu();
@@ -425,7 +428,7 @@ final class GUISearcherEntryPopup {
 		
 		//Ctrl C to copy to clipboard
 		JMenuItem copy = new JMenuItem("Copy");
-		copy.setAccelerator(GUIShortcuts.copy[0]);
+		gui.shortcuts.setAccelerator(copy, gui.shortcuts.copy[0]);
 		copy.addActionListener(e2 -> {
 			String text = ((JTextComponent)invoker).getSelectedText();
 			Toolkit.getDefaultToolkit()

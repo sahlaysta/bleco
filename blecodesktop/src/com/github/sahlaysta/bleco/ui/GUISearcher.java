@@ -12,12 +12,13 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.util.Arrays;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Queue;
 
 import javax.swing.JLayeredPane;
 import javax.swing.JPanel;
 import javax.swing.KeyStroke;
-import javax.swing.SwingUtilities;
 import javax.swing.SwingWorker;
 import javax.swing.border.EmptyBorder;
 import javax.swing.event.DocumentEvent;
@@ -58,7 +59,7 @@ final class GUISearcher extends JLayeredPane {
 		mainPanel.setLayout(new BorderLayout());
 		
 		//Searcher components
-		searchField = new GUIJTextField();
+		searchField = new GUIJTextField(gui);
 		searchResultList = new GUISearcherList(gui);
 		
 		//Match background color
@@ -143,17 +144,16 @@ final class GUISearcher extends JLayeredPane {
 	
 	
 	//Update search results to list
+	private final WorkerManager wm = new WorkerManager();
 	private static final List<?> EMPTY_SEARCH = Arrays.asList("Enter a search term...");
 	private static final List<?> NO_RESULTS = Arrays.asList("No results found...");
 	void updateSearch() {
 		updateSearch(searchField.getText());
 	}
 	void updateSearch(String search) {
-		SwingUtilities.invokeLater(() ->
-			new SearchWorker(search).execute());
+		wm.queue(new SearchWorker(wm, search));
 	}
 	private List<SearchResult> searchDict(String search) {
-		//forced english search check
 		return
 			forceEngSearch
 				? gui.dict.englishSearch(search)
@@ -173,61 +173,93 @@ final class GUISearcher extends JLayeredPane {
 		}
 	}
 	
-	//asynchronous search update queue
-	private static final class AtomicQ {
-		volatile long id = 0, count = 0;
-	}
-	private final AtomicQ aq = new AtomicQ();
-	private final class SearchWorker extends SwingWorker<Object, Object> {
-		final String search;
-		final long id;
-		SearchWorker(String search) {
-			this.search = search;
-			//get queue id
-			synchronized(aq) {
-				id = aq.count++;
+	//swingworker queue
+	//rough rewrite of https://stackoverflow.com/a/22425451/
+	private static final class WorkerManager {
+		//queue multiple swingworkers
+		final Queue<QueueableWorker> q = new LinkedList<>();
+		volatile boolean executing = false;
+		
+		//queue operations
+		synchronized void queue(QueueableWorker qw) {
+			q.add(qw);
+			if (!executing)
+				executeNext();
+		}
+		synchronized void executeNext() {
+			QueueableWorker qw = q.poll();
+			if (qw != null) {
+				setExecuting(true);
+				qw.execute();
 			}
 		}
+		void setExecuting(boolean executing) {
+			this.executing = executing;
+		}
+	}
+	
+	//convenience abstraction over swingworker class
+	private static abstract class QueueableWorker
+			extends SwingWorker<Object, Object> {
+		final WorkerManager wm;
+		QueueableWorker(WorkerManager wm) {
+			this.wm = wm;
+		}
+		abstract void workerDone();
+		abstract void doWork();
 		@Override
-		protected Object doInBackground() throws Exception {
-			//wait for queue id
-			synchronized(aq) {
-				while (id != aq.id)
-					aq.wait();
-			}
-			
-			//update search async
-			List<SearchResult> searchResult = searchDict(search);
-			SwingUtilities.invokeAndWait(() ->
-				setSearch(search, searchResult));
-			
-			//update queue id by 1, notify waiters
-			synchronized(aq) {
-				aq.id++;
-				aq.notify();
-			}
-			
+		final protected Object doInBackground() throws Exception {
+			doWork();
 			return null;
 		}
+		@Override
+		final protected void done() {
+			workerDone();
+			wm.setExecuting(false);
+			wm.executeNext();
+		}
+	}
+
+	//search implementation of queueableworker
+	private final class SearchWorker extends QueueableWorker {
+		//constructor
+		final String search;
+		SearchWorker(WorkerManager wm, String search) {
+			super(wm);
+			this.search = search;
+		}
+		
+		//swingworker operations
+		volatile List<SearchResult> searchResult;
+		@Override
+		protected void doWork() {
+			//perform dictionary search
+			searchResult = searchDict(search);
+		}
+		@Override
+		void workerDone() {
+			setSearch(search, searchResult);
+		}
 	}
 	
 	
 	
-	//Searcher operations
+	//Gui searcher operations
+	
 	private void keyEvent(KeyEvent e) {
 		//searcher key shortcuts
 		KeyStroke ks = KeyStroke.getKeyStrokeForEvent(e);
-		if (keyEq(GUIShortcuts.openEntry, ks))
+		if (keyEq(gui.shortcuts.openEntry, ks))
 			openSelectedEntry();
-		else if (keyEq(GUIShortcuts.next, ks))
+		else if (keyEq(gui.shortcuts.next, ks))
 			moveSelection(1);
-		else if (keyEq(GUIShortcuts.prev, ks))
+		else if (keyEq(gui.shortcuts.prev, ks))
 			moveSelection(-1);
-		else if (keyEq(GUIShortcuts.next5, ks))
+		else if (keyEq(gui.shortcuts.next5, ks))
 			moveSelection(5);
-		else if (keyEq(GUIShortcuts.prev5, ks))
+		else if (keyEq(gui.shortcuts.prev5, ks))
 			moveSelection(-5);
-		else if (keyEq(GUIShortcuts.copySelEntry, ks))
+		else if (keyEq(gui.shortcuts.copySelEntry, ks))
 			gui.controller.copy();
 	}
 	private static boolean keyEq(KeyStroke[] sh, KeyStroke ks) {

@@ -103,12 +103,14 @@ public class Dictionary {
 				: Collections.unmodifiableList(list);
 	}
 	private List<SearchResult> wildcardSearch(String search) {
-		/* returns null if a search is only
-		 * asterisks (asterisk-only searches
-		 * are inaccurate) */
-		for (int i = 0, len = search.length(); i < len; i++)
-			if (search.charAt(i) != '*')
+		/* wildcard searches must have at least
+		 * one chinese character (because of indexing) */
+		int minRange = DictionaryAbstractSearch.UNICODE_CHINESE_START_RANGE;
+		for (int i = 0, len = search.length(); i < len; i++) {
+			char ch = search.charAt(i);
+			if (ch != '*' && ch > minRange)
 				return uml(chineseSearch.search(search));
+		}
 		return null;
 	}
 	private List<SearchResult> sentenceSplitSearch(String search) {

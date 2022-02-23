@@ -35,8 +35,10 @@ final class GUIJTextField extends JTextField {
 	private static final long serialVersionUID = 1L;
 
 	//Constructor
-	GUIJTextField() {
-		configUiManager();
+	final GUI gui;
+	GUIJTextField(GUI gui) {
+		this.gui = gui;
+		configUiManager(gui);
 	}
 	
 	//setText clears undomanager
@@ -51,10 +53,13 @@ final class GUIJTextField extends JTextField {
 	
 	//configure UIManager global text field
 	private static boolean configured = false;
-	private static void configUiManager() {
+	private static void configUiManager(GUI gui) {
 		if (configured)
 			return;
 		configured = true;
+		
+		//shortcuts
+		GUIShortcuts gs = gui.shortcuts;
 		
 		/* make it so that clicking out of a
 		 * popup menu doesnt disable the
@@ -138,12 +143,12 @@ final class GUIJTextField extends JTextField {
 			selAll.addActionListener(reqFoc);
 			undo.addActionListener(reqFoc);
 			redo.addActionListener(reqFoc);
-			cut.setAccelerator(GUIShortcuts.cut[0]);
-			copy.setAccelerator(GUIShortcuts.copy[0]);
-			paste.setAccelerator(GUIShortcuts.paste[0]);
-			selAll.setAccelerator(GUIShortcuts.selectAll[0]);
-			undo.setAccelerator(GUIShortcuts.undo[0]);
-			redo.setAccelerator(GUIShortcuts.redo[0]);
+			gs.setAccelerator(cut, gs.cut[0]);
+			gs.setAccelerator(copy, gs.copy[0]);
+			gs.setAccelerator(paste, gs.paste[0]);
+			gs.setAccelerator(selAll, gs.selectAll[0]);
+			gs.setAccelerator(undo, gs.undo[0]);
+			gs.setAccelerator(redo, gs.redo[0]);
 			if (isUneditable(jtc)) {
 				cut.setEnabled(false);
 				paste.setEnabled(false);
@@ -249,9 +254,9 @@ final class GUIJTextField extends JTextField {
 					um.redo();
 			}
 		});
-		for (KeyStroke ks: GUIShortcuts.undo)
+		for (KeyStroke ks: gs.undo)
 			im.put(ks, u);
-		for (KeyStroke ks: GUIShortcuts.redo)
+		for (KeyStroke ks: gs.redo)
 			im.put(ks, r);
 
 		
