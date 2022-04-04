@@ -1,3 +1,5 @@
+I am considering rewriting Bleco to C++ for Chinese text-to-speech features
+
 # bleco
 An offline Chinese-English and English-Chinese dictionary UI for Desktop, inspired by Pleco
 
