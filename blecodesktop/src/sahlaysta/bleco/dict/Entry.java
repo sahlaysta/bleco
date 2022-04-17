@@ -14,7 +14,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * Traditional Chinese is determined by the
  * character type of {@link Entry#getCharacterType()}.
  * 
- * @author porog
+ * @author sahlaysta
  * */
 public class Entry {
 	

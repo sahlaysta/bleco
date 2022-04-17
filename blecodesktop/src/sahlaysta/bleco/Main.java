@@ -8,7 +8,7 @@ import java.io.UncheckedIOException;
 import sahlaysta.bleco.ui.GUI;
 
 /** Bleco GUI main class.
- * @author porog */
+ * @author sahlaysta */
 public final class Main {
 	
 	private Main() {}

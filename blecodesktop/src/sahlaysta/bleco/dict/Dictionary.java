@@ -10,7 +10,7 @@ import java.util.List;
  * Maintains {@link Entry} objects and is
  * searchable by {@link #search(String)}.
  * 
- * @author porog
+ * @author sahlaysta
  * */
 public class Dictionary {
 	

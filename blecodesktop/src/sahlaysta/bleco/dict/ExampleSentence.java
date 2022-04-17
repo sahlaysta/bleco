@@ -6,7 +6,7 @@ package sahlaysta.bleco.dict;
  * {@link #chineseSentence} sentence
  * and its {@link #englishSentence} translation.
  * 
- * @author porog
+ * @author sahlaysta
  * */
 public class ExampleSentence {
 	

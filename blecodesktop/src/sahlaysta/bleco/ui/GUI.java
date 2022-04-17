@@ -12,7 +12,7 @@ import sahlaysta.bleco.Main;
 import sahlaysta.bleco.dict.Dictionary;
 
 /** GUI class of Bleco.
- * @author porog */
+ * @author sahlaysta */
 public final class GUI extends JFrame {
 	private static final long serialVersionUID = 1L;
 	

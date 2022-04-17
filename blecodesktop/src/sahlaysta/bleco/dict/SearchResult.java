@@ -6,7 +6,7 @@ package sahlaysta.bleco.dict;
  * method, often returned in
  * multiples.
  * 
- * @author porog
+ * @author sahlaysta
  * */
 public class SearchResult {
 	

@@ -48,7 +48,7 @@ import com.github.sahlaysta.cccedict.CCCEDICTPinyin;
  * outputfile.bleco
  * </code>
  * 
- * @author porog
+ * @author sahlaysta
  * */
 public final class BlecoDict {
 	

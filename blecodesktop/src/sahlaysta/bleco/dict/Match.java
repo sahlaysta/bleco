@@ -8,7 +8,7 @@ package sahlaysta.bleco.dict;
  * matched {@link #entry}, and the string
  * {@link #index} at which the match was found.
  * 
- * @author porog
+ * @author sahlaysta
  * */
 public class Match {
 	
