@@ -1,6 +1,6 @@
 # Bleco
 
-    Copyright 2021-2022 Bleco Contributors https://github.com/sahlaysta/bleco
+    Copyright 2021-2022 sahlaysta https://github.com/sahlaysta/bleco
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this Work except in compliance with the License.
     You may obtain a copy of the License at
