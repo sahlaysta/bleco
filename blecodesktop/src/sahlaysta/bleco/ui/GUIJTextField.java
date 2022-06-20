@@ -322,7 +322,9 @@ final class GUIJTextField extends JTextField {
 	
 	
 	//uneditable jtextcomponent with functioning caret
-	private static final List<JTextComponent> UNEDITABLE_JTEXTCOMPONENTS = new ArrayList<>();
+	
+	static final List<JTextComponent> UNEDITABLE_JTEXTCOMPONENTS = new ArrayList<>();
+	
 	/* configures a jtextcomponent so that the caret still
 	 * functions but the contents cannot be edited */
 	static void setUneditable(JTextComponent jtc) {
@@ -333,6 +335,19 @@ final class GUIJTextField extends JTextField {
 			return;
 		((AbstractDocument)doc).setDocumentFilter(EMPT_DOC_FILTER);
 		UNEDITABLE_JTEXTCOMPONENTS.add(jtc);
+	}
+	
+	/* remove jtextcomponent from the list to prevent
+	 * memory leak */
+	static void disposeUneditable(Container c) {
+		if (c == null)
+			return;
+		for (Component c2: GUIUtil.getAllComponents(c)) {
+			if (!(c2 instanceof JTextComponent))
+				continue;
+			JTextComponent jtc = (JTextComponent)c2;
+			UNEDITABLE_JTEXTCOMPONENTS.remove(jtc);
+		}
 	}
 	
 	//check if a jtextcomponent's contents are not editable

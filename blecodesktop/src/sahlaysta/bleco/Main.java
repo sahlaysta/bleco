@@ -13,7 +13,7 @@ public final class Main {
 	
 	private Main() {}
 	
-	/** Main of Bleco GUI.
+	/** Entry point for Bleco GUI.
 	 * @param args unused */
 	public static void main(String[] args) {
 		new GUI().setVisible(true);
